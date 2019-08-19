@@ -5,7 +5,7 @@ This repository contains the data, code and manuscript for the *PsyFaKo Replicat
 ## How to reproduce our analyses
 
 1. Download or clone the repository from GitHub.
-1. Open the file `2019_osip_os-survey.Rproj` in RStudio. This will automatically ensure, that your working directory is set correctly and the relative paths in our script work.
+1. Open the file `main.Rproj` in RStudio. This will automatically ensure, that your working directory is set correctly and the relative paths in our script work.
 1. You should now be able to run our R-scripts.
 1. Your can refer to the `codebook_xxx.xlsx` files for detailed information about the data.
 
