@@ -1,0 +1,11 @@
+.DS_Store
+.Rproj.user
+data/main_allunis.csv
+uni_comparisons.Rmd
+.Rhistory
+.Rhistory
+code/wrangling/get_emails.R
+code/nosi-stuff
+code/nosi-stuff.txt
+code/plots_uni.Rmd
+code/wrangling/monitoring.Rmd
