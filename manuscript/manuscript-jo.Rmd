@@ -1,0 +1,187 @@
+---
+title             : "The title"
+shorttitle        : "Title"
+
+author: 
+  - name          : "First Author"
+    affiliation   : "1"
+    corresponding : yes    # Define only one corresponding author
+    address       : "Postal address"
+    email         : "my@email.com"
+  - name          : "Ernst-August Doelle"
+    affiliation   : "1,2"
+
+affiliation:
+  - id            : "1"
+    institution   : "Wilhelm-Wundt-University"
+  - id            : "2"
+    institution   : "Konstanz Business School"
+
+authornote: |
+  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
+
+  Enter author note here.
+
+abstract: |
+  One or two sentences providing a **basic introduction** to the field,  comprehensible to a scientist in any discipline.
+  
+  Two to three sentences of **more detailed background**, comprehensible  to scientists in related disciplines.
+  
+  One sentence clearly stating the **general problem** being addressed by  this particular study.
+  
+  One sentence summarizing the main result (with the words "**here we show**" or their equivalent).
+  
+  Two or three sentences explaining what the **main result** reveals in direct comparison to what was thought to be the case previously, or how the  main result adds to previous knowledge.
+  
+  One or two sentences to put the results into a more **general context**.
+  
+  Two or three sentences to provide a **broader perspective**, readily comprehensible to a scientist in any discipline.
+  
+  <!-- https://tinyurl.com/ybremelq -->
+  
+keywords          : "keywords"
+wordcount         : "X"
+
+bibliography      : ["r-references.bib"]
+
+floatsintext      : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+mask              : no
+draft             : no
+
+header-includes:
+  - \usepackage[ngerman]{babel}
+
+documentclass     : "apa6"
+classoption       : "man"
+output            : papaja::apa6_pdf
+---
+
+```{r setup, include = FALSE}
+library("papaja")
+```
+
+```{r analysis-preferences}
+# Seed for random number generation
+set.seed(42)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+```{r import data, include=FALSE}
+library(tidyverse)
+library(ggpubr)
+block2_results <- readRDS("data/block2_results.rds")
+```
+
+
+
+
+# Methoden
+We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
+
+## Teilnehmende
+
+## Prozedur
+
+## Datenanalyse
+We used <!---`r cite_r("r-references.bib")`---> for all our analyses.
+
+
+# Ergebnisse
+
+```{r extract q01 values, include=FALSE}
+n_qrps <- block2_results$data$q01 %>% 
+  summarise(n_qrps = mean(n_qrps_per_proj)) %>% 
+  pull(n_qrps) %>% 
+  round(2)
+
+sd_qrps <- block2_results$data$q01 %>% 
+  summarise(sd_qrps = sd(n_qrps_per_proj)) %>% 
+  pull(sd_qrps) %>% 
+  round(2)
+```
+
+```{r extract q02 values, include=FALSE}
+q02 <- block2_results$data$q02
+
+n_qrps_emp.intern <- q02 %>% 
+  filter(project == "emp.intern", type_of_practice == "Questionable") %>% 
+  pull(practices_per_proj) %>% 
+  round(2)
+
+n_qrps_thesis.msc <- q02 %>% 
+  filter(project == "thesis.msc", type_of_practice == "Questionable") %>% 
+  pull(practices_per_proj) %>% 
+  round(2)
+```
+
+```{r extract q03 and q05 values, include=FALSE}
+q03 <- block2_results$data$q03
+q05 <- block2_results$data$q05
+
+share_no_sample_planning <- q05 %>% 
+  filter(practice == "No Sample Planning") %>% 
+  pull(share) %>% 
+  round(2)
+
+share_sr_of_variables <- q05 %>% 
+  filter(practice == "SR of Variables") %>% 
+  pull(share) %>% 
+  round(2)
+
+share_rounding_p_values <- q05 %>% 
+  filter(practice == "Rounding p-Values") %>% 
+  pull(share) %>% 
+  round(2)
+
+share_flexible_sample_size <- q05 %>% 
+  filter(practice == "Flexible Sample Size") %>% 
+  pull(share) %>% 
+  round(2)
+```
+
+Aus den Angaben der Teilnehmenden ergab sich ein mittlerer Einsatz von `r n_qrps` fragwürdigen Forschungspraktiken (SD = `r sd_qrps`) pro Projekt. Wie in \autoref{fig:plot02} zu sehen ist, zeigten sich dabei Unterschiede zwischen den abgefragten Projekten. Besonders viele fragwürdige Praktiken scheinen demnach mit durchschnittlich `r n_qrps_emp.intern` Praktiken pro Projekt im Expra verwendet zu werden, während Masterarbeiten mit durchschnittlich `r n_qrps_thesis.msc` verwendeten fragwürdigen Praktiken den niedrigsten Wert aufweisen. 
+
+```{r plot02, fig.cap="\textbf{Anzahl eingesetzter fragwürdiger Forschungspraktiken pro Projekt.} Schwarze Punkte stellen den Mittelwert dar. Die Anzahl ist ganzzahlig, die Punkte wurden mit zufälliger Streuung versehen."}
+block2_results$plots$plot02 + labs(title = NULL, subtitle = NULL,
+                                   ylab = "Anzahl eingesetzter QRPs", 
+                                   xlab = "Projekt")
+```
+
+In \autoref{fig:plot0305} ist die Einsatzhäufigkeit der einzelnen abgefragten Forschungspraktiken dargestellt. Als am häufigsten eingesetzte fragwürdige Forschungsmethoden zeigten sich fehlende Stichprobenplanung und selektives Berichten abhängiger Variablen (`r share_no_sample_planning`, bzw. `r share_sr_of_variables` % der Projekte betroffen). Die von unseren Teilnehmenden am seltensten eingesetzten Methoden waren das Abrunden von p-Werten und das Nacherheben von Versuchspersonen zum Zweck der Herbeiführung statistischer Signifikanz (`r share_rounding_p_values`, bzw. `r share_flexible_sample_size` % der Projekte betroffen).
+
+
+```{r plot0305, fig.cap="Caption"}
+plot03 <- block2_results$plots$plot03 + 
+  #labs(title = NULL, subtitle = NULL) +
+  NULL
+
+plot05 <- block2_results$plots$plot05 + 
+  labs(title = NULL, subtitle = NULL) +
+  NULL
+
+plot05
+
+#ggpubr::ggarrange(plot03, plot05, ncol = 1, nrow = 2)
+```
+
+
+# Diskussion
+
+
+\newpage
+
+# References
+```{r create_r-references}
+# r_refs(file = "r-references.bib")
+```
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id = "refs"></div>
+\endgroup

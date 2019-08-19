@@ -1,0 +1,200 @@
+---
+title: "Fragwürdige Forschungspraktiken in empirischen Projekten im Rahmen des Psychologie-Studiums"
+author: "PsyFaKo Open Science AG"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output:
+  bookdown::word_document2: 
+    fig_caption: yes
+    reference_docx: manuscript-style-reference.docx
+  pdf_document: 
+    fig_caption: yes
+csl: apa.csl
+bibliography: references.bib
+lang: de
+---
+
+<!-- Hier werden Pakete geladen, die im Dokument benötigt werden. -->
+```{r load packages, include=FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+<!-- Hier werden Datensätze und R-Objekte importiert, um Daten/Analysen und Plots automatisch einfügen zu können. -->
+```{r import data, include=FALSE}
+main_descriptives <- read_csv("data/main_descriptives_filtered.csv")
+main_descriptives_full <- read_csv("data/main_descriptives_full.csv")
+n_participants_uni <- read_csv("data/n_participants_uni.csv")
+
+block2 <- readRDS("data/block2_results.rds")
+block3 <- readRDS("data/block3_results.rds")
+```
+
+
+```{r include=FALSE}
+# Function for "germanizing" number prints by inserting a comma as decimal separator. Also rounds the number and ensures that a minimum number of decimals is displayed
+co <- function(x, nsmall = 2, nround = 2, ger = T) {
+  if (ger == T) {
+    out <- x %>% format(digits = nround, nsmall = nsmall, decimal.mark = ",")
+  } else {
+    out <- x %>% format(digits = nround, nsmall = nsmall)
+  }
+  
+  return(out)
+}
+  
+```
+
+
+# Zusammenfassung
+
+# Einleitung
+
+Testzitat [@Simmons2018a]
+
+# Methode
+
+# Ergebnisse
+
+## Verbreitung fragwürdiger Forschungspraktiken
+
+Den Ergebnissen in diesem Abschnitt liegen die Daten der EF (Empirische Erfahrung)-Teilstichprobe (N = `r nrow(main_descriptives)`) zugrunde.
+
+```{r extract q01 values, echo=FALSE}
+n_qrps <- block2$q01 %>% 
+  filter(type_of_practice == "Questionable") %>% pull(m) %>% co()
+
+sd_qrps <- block2$q01 %>% 
+  filter(type_of_practice == "Questionable") %>% pull(sd) %>% co()
+```
+
+
+```{r extract q02 values, echo=FALSE}
+q02 <- block2$q02
+
+n_qrps_emp.intern <- q02 %>% 
+  filter(project == "emp.intern", type_of_practice == "Questionable") %>% 
+  pull(mean) %>% co()
+
+n_qrps_thesis.msc <- q02 %>% 
+  filter(project == "thesis.msc", type_of_practice == "Questionable") %>% 
+  pull(mean) %>% co()
+
+n_qrps_thesis.bsc <- q02 %>% 
+  filter(project == "thesis.bsc", type_of_practice == "Questionable") %>% 
+  pull(mean) %>% co()
+
+n_qrps_project <- q02 %>% 
+  filter(project == "project", type_of_practice == "Questionable") %>% 
+  pull(mean) %>% co()
+
+n_qrps_other <- q02 %>% 
+  filter(project == "other", type_of_practice == "Questionable") %>% 
+  pull(mean) %>% co()
+```
+
+```{r extract q03 and q05 values, include=FALSE}
+q03 <- block2$q03
+q05 <- block2$q05
+
+n_projects <- q05 %>% pull(n_projects_total) %>% unique()
+
+rounding_number <- 1
+
+share_no_sample_planning <- q05 %>% 
+  filter(practice == "No Sample Planning") %>% 
+  pull(share) %>% co(nround = rounding_number)
+
+share_sr_of_variables <- q05 %>% 
+  filter(practice == "SR of Variables") %>% 
+  pull(share) %>% co(nround = rounding_number)
+
+share_rounding_p_values <- q05 %>% 
+  filter(practice == "Rounding p-Values") %>% 
+  pull(share) %>% co(nround = rounding_number)
+
+share_flexible_sample_size <- q05 %>% 
+  filter(practice == "Flexible Sample Size") %>% 
+  pull(share) %>% co(nround = rounding_number)
+
+share_power <- q05 %>% 
+  filter(practice == "Power Analysis") %>% 
+  pull(share) %>% co(nround = rounding_number)
+
+share_prereg <- q05 %>% 
+  filter(practice == "Preregistration") %>% 
+  pull(share) %>% co(nround = rounding_number)
+```
+
+Aus den Angaben der Teilnehmenden ergibt sich ein mittlerer Einsatz von `r n_qrps` (SD = `r sd_qrps`) fragwürdigen Forschungspraktiken pro Projekt. Wie in Abbildung \@ref(fig:plot02) zu sehen ist, zeigen sich dabei Unterschiede zwischen den abgefragten Projekten. Besonders viele fragwürdige Praktiken scheinen demnach mit durchschnittlich `r n_qrps_emp.intern` (SD = `r q02 %>% filter(project == "emp.intern", type_of_practice == "Questionable") %>% pull(sd) %>% co()`) Praktiken pro Projekt im Expra verwendet zu werden, während Masterarbeiten mit durchschnittlich `r n_qrps_thesis.msc` (SD = `r q02 %>% filter(project == "thesis.msc", type_of_practice == "Questionable") %>% pull(sd) %>% co()`) verwendeten fragwürdigen Praktiken den niedrigsten Wert aufweisen. Bachelor- und Projektarbeiten sowie andere Projekte (durchschnittlich jeweils `r n_qrps_thesis.bsc` (SD = `r q02 %>% filter(project == "thesis.bsc", type_of_practice == "Questionable") %>% pull(sd) %>% co()`), `r n_qrps_project` (SD = `r q02 %>% filter(project == "project", type_of_practice == "Questionable") %>% pull(sd) %>% co()`) und `r n_qrps_other` (SD = `r q02 %>% filter(project == "other", type_of_practice == "Questionable") %>% pull(sd) %>% co()`) fragwürdige Praktiken pro Projekt) liegen dazwischen. Betrachtet man die Projekte, die sich eindeutig nach Studienfortschritt ordnen lassen, also Expra, Bachelorarbeit und Masterarbeit, so zeigt sich ein deutlicher Trend: Mit fortschreitendem Studium wurden immer weniger fragwürdige Forschungspraktiken von den Teilnehmenden eingesetzt.
+
+```{r plot02, echo=FALSE, fig.cap="Anzahl eingesetzter fragwürdiger Forschungspraktiken aufgeschlüsselt nach Art des Projekts."}
+knitr::include_graphics('../plots/german/plot02c_ger.png')
+```
+
+In Abbildung \@ref(fig:plot05) ist die Einsatzhäufigkeit der einzelnen abgefragten Forschungspraktiken dargestellt. Als am häufigsten eingesetzte fragwürdige Forschungsmethoden zeigten sich fehlende Stichprobenplanung und selektives Berichten abhängiger Variablen mit einem Anteil von `r share_no_sample_planning` %, bzw. `r share_sr_of_variables` % betroffenen Projekten. Die von den Teilnehmenden am seltensten eingesetzten Methoden waren das Abrunden von p-Werten und das Nacherheben von Versuchspersonen zum Zweck der Herbeiführung statistischer Signifikanz mit `r share_rounding_p_values` %, bzw. `r share_flexible_sample_size` % betroffenen Projekten. Die beiden offenen, bzw. positiven Forschungspraktiken, die ebenfalls Teil der Befragung waren, rangieren am oberen Ende der Einsatzhäufigkeit: Laut Angaben der Teilnehmenden wurde für `r share_power` % der erfassten Projekte eine Power-Analyse zur Stichprobenplanung durchgeführt, und `r share_prereg` % der erfassten Projekte wurden präregistriert. Die Präregistrierung fand am häufigsten bei einer Lehrperson statt (`r block2$prereg_data %>% filter(names_prereg_where == "lecturer") %>% pull(prereg_counts)` mal gewählt). Es folgen in nach Häufigkeit absteigender Reihenfolge als Plattformen für Präregistrierungen das Open Science Framework (OSF, `r block2$prereg_data %>% filter(names_prereg_where == "osf.io") %>% pull(prereg_counts)` mal gewählt), aspredicted.org (`r block2$prereg_data %>% filter(names_prereg_where == "aspredicted.org") %>% pull(prereg_counts)` mal gewählt), "andere" (`r block2$prereg_data %>% filter(names_prereg_where == "other") %>% pull(prereg_counts)` mal gewählt) und ein Journal (`r block2$prereg_data %>% filter(names_prereg_where == "journal") %>% pull(prereg_counts)` mal gewählt). Von den Teilnehmenden gaben `r block2$prereg_data %>% filter(names_prereg_where == "never preregistered") %>% pull(prereg_counts)` Personen an, nie eines ihrer empirischen Projekte präregistriert zu haben.
+
+Anzumerken ist, dass hier *nicht* wie bei @John2012 der Anteil der Teilnehmenden gezeigt wird, die die jeweilige Forschungspraktik *mindestens einmal* verwendet haben, sondern der Anteil der pro Forschungspraktik betroffenen Projekte. Diese Berechnung erlaubt eine detailliertere Betrachtung, da Informationen über alle `r n_projects` im Datensatz enthaltenen Projekte dargestellt werden, anstelle sich auf einen (ungenaueren) Datenpunkt pro Teilnehmer\*in zu beschränken. Aus diesem Grund weichen wir hier von unserer Präregistrierung [(https://osf.io/k85r4/)](https://osf.io/k85r4/) ab, die eine Darstellung analog zu @John2012 vorsah ("Praktikaggregation"). Diese Darstellung kann in den [ergänzenden Online-Materialien](https://jobrachem.github.io/Students-Open-Science-Survey/supplementary_data-edited.pdf)(LINK) dennoch abgerufen werden und zeigt generell ein ähnliches Bild, wobei die Prävalenzschätzungen durch den Informationsverlust überhöht sind. Wir verzichten zugunsten einer prägnanteren Darstellung hier außerdem auf die in der Registrierung vorgesehene "Detailaggregation", eine Aufschlüsselung der Praktikaggregation nach Forschungsprojekt. Sie kann ebenfalls in den Online-Materialien abgerufen werden.
+
+```{r plot05, echo=FALSE, fig.cap="Anteil von Projekten, in denen die jeweilige Forschungspraktik eingesetzt wurde. S.B. = Selektives Berichten."}
+knitr::include_graphics('../plots/german/plot05_ger.png')
+```
+
+## Zusätzliche Ergebnisse
+
+Den Ergebnissen in diesem Abschnitt liegen die Daten der vollen Stichprobe (N = `r nrow(main_descriptives_full)`) zugrunde.
+
+```{r, echo=FALSE}
+heard_of_rc <- block3$rc_teaching_general %>% 
+  group_by(rc_teaching) %>% 
+  mutate(n_sum = sum(n_semester)) %>%
+  mutate(n_answer = sum(n)) %>% 
+  mutate(share = (n_answer / n_sum) * 100) %>% 
+  distinct(share, rc_teaching)
+
+# a little wasteful workaround to get the correct number of students per
+# study stage.
+tmp <- main_descriptives_full %>% 
+           group_by(study_stage_mc) %>% 
+           summarise(n = n()) %>% 
+  arrange(study_stage_mc) %>% 
+  pull(n)
+
+heard_of_rc_stage <- block3$rc_teaching_general %>% 
+  arrange(study_stage_mc) %>% 
+  mutate(n_sum = recode(study_stage_mc, 
+                        "Bachelor" = tmp[1], 
+                        "I don't study (any more)" = tmp[2], 
+                        "Master" = tmp[3], 
+                        "Other" = tmp[4])) %>% 
+  group_by(rc_teaching, study_stage_mc) %>% 
+  mutate(n_answer = sum(n)) %>% 
+  mutate(share = (n_answer / n_sum) * 100) %>% 
+  distinct(share, rc_teaching)
+```
+
+### Behandlung der Replikationskrise in der Lehre 
+
+Zu den hier dargestellten Ergebnissen finden sich ausführliche Tabellen mit allen Daten in den [ergänzenden Online-Materialien](https://jobrachem.github.io/Students-Open-Science-Survey/supplementary_data-edited.pdf) (LINK).
+
+**Thematisierung der Replikationskrise**. Insgesamt gaben `r heard_of_rc %>% filter(rc_teaching == "Did hear of RC") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % der Teilnehmenden an, dass die Replikationskrise an ihrer jeweils aktuellen Universität in Lehrveranstaltungen thematisiert wurde; `r heard_of_rc %>% filter(rc_teaching == "Did not hear of RC") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % gaben an, dass sie nicht thematisiert wurde. Die restlichen `r heard_of_rc %>% filter(rc_teaching == "I don't know") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % der Teilnehmenden antworteten mit "Weiß ich nicht". Erfreulich ist dabei, dass selbst unter den Studienanfänger\*innen (Studierende im ersten oder zweiten Bachelor-Semester) `r block3$rc_teaching_general %>% filter(study_stage_mc == "Bachelor" & semester == "1/2" & rc_teaching == "Did hear of RC") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % der Teilnehmenden angaben, in Lehrveranstaltungen von der Replikationskrise gehört zu haben. Für alle Studierenden im Bachelor und im Master zeigte sich im Allgemeinen ein ähnliches Bild mit `r heard_of_rc_stage %>% filter(study_stage_mc == "Bachelor" & rc_teaching == "Did hear of RC") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %, bzw. `r heard_of_rc_stage %>% filter(study_stage_mc == "Master" & rc_teaching == "Did hear of RC") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % positiven Antworten.
+
+**Betrachtung nach Lehrveranstaltungen**. Die Behandlung der Replikationskrise fand größtenteils in der Methodenlehre (inkl. Expra) statt: `r block3$rc_teaching_specific %>% filter(answer == "Methods, Stats, Expra") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % der Teilnehmenden gaben an, dass hier die Replikationskrise thematisiert wurde. In der Lehre der Sozialpsychologie, der am stärksten im Fokus der Kritik stehenden Teildisziplin, wurde am zweithäufigsten über die Replikationskrise berichtet (`r block3$rc_teaching_specific %>% filter(answer == "Social Psychology") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %). In den 13 übrigen Fachbereichen (inkl. "Andere") bewegt sich die Abdeckung zwischen `r block3$rc_teaching_specific %>% filter(answer == "General Psychology") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % (Allgemeine Psychologie) und `r block3$rc_teaching_specific %>% filter(answer == "Forensic") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % (Forensische Psychologie). Dabei sollte beachtet werden, dass wohl nur ein Bruchteil der Befragten Module in Forensischer Psychologie belegt haben dürfte.
+
+**Behandlung fragwürdiger Praktiken**. Studierende erleben im Studium durchaus eine kritische thematisierung einzelner fragwürdiger Forschungspraktiken. So gaben `r block3$qrps_teaching %>% filter(answer == "HARKing") %>% pull(share) %>% co(nround = 1, nsmall = 1)` % der Teilnehmenden an, eine Problematisierung von HARKing (Hypothesizing After the Results are Known, das Aufstellen von Hypothesen nach Kenntnis der Ergebnisse) erfahren zu haben. HARKing stellte sich als die am häufigsten in der Lehre kritisierte fragwürdige Forschungspraktik heraus. Auf den folgenden Plätzen finden sich fehlende Stichprobenplanung (`r block3$qrps_teaching %>% filter(answer == "No Sample Planning") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %) und selektives Berichten von Variablen (`r block3$qrps_teaching %>% filter(answer == "SR of Variables") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %). Am seltensten wurden Flexibilität in der Datenanalyse (`r block3$qrps_teaching %>% filter(answer == "Flexible Analysis") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %) und das Abrunden von p-Werten (`r block3$qrps_teaching %>% filter(answer == "Rounding p-Values") %>% pull(share) %>% co(nround = 1, nsmall = 1)` %) kritisch thematisiert.
+
+### Einstellung von Studierenden
+
+Abbildung \@ref(fig:attitudes) zeigt die Einschätzung der Wichtigkeit des Themenkomplexes “Open Science und Replikationskrise” durch die Teilnehmenden, ihr Interesse daran und ihre Einschätzung dazu, wie gut sie über das Thema informiert sind. Deutlich wird, dass das Thema von der überwältigenden Mehrheit der Teilnehmenden für wichtig gehalten wird, dass eine Mehrheit der Teilnehmenden Interesse an dem Thema hat, und dass sich ein substanzieller Teil der Teilnehmenden als nicht gut informiert einschätzt.
+
+```{r attitudes, echo=FALSE, fig.cap="Einstellungen der Teilnehmenden zum Themenkomplex \"Open Science und Replikationskrise\" auf einer 5-Punkte Likert-Skala von \"gar nicht\" bis \"sehr\". Bedeutung der Prozentzahlen: \"gar nicht\" & \"2\" (links), \"3\" (mittig), \"4\" & \"sehr\" (rechts)."}
+knitr::include_graphics('../plots/german/attitudes_plot_ger.png')
+```
+
+# Diskussion
+
+# Literatur
+<!-- Diese Einstellungen sorgen für die korrekte hängende Einrückung in der Literaturliste, wenn ein PDF produziert wird. -->
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent

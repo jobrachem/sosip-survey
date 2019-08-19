@@ -1,0 +1,317 @@
+---
+title: "Data Wrangling"
+subtitle: "PsyFaKo Open Science Survey"
+author: "Johannes Brachem"
+date: "Last Update: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+Purpose: General data cleaning and wrangling.
+Output:  main.csv           
+
+# Load Packages
+```{r packages}
+library(formr)
+library(tidyverse)
+library(lubridate)
+```
+
+## Session Info
+Session info for reproducibility
+```{r session info}
+sessionInfo()
+```
+
+# Download data
+```{r download data}
+# not included online, because the script contains a password
+# source("code/wrangling/download_data.r")
+```
+
+```{r}
+main_start <- read_csv("data/main_start.csv")
+
+# for the purpose of getting excat participantt numbers per university,
+# we used the raw data set
+# main_start <- read_csv("data/main_raw.csv")
+```
+
+
+# Wrangle Data
+## Apply Exclusion Criteria
+### Simple Criteria
+Note that in main_start.r, we already excluded two participants whose current university was "Amsterdam", because according to our exclusion criteria we only aimed at students in the german-speakinig countries. This had to be done in main_start.r, because we removed some of the information for data protection reasons.
+```{r exclusion_01}
+main_step01 <- main_start %>% 
+  # remove observations that meet exclusion criteria
+  
+  filter(created >= as.Date("2018-11-22")) %>%  # filter out data from testing phase
+  filter(created <= as.Date("2019-02-28")) %>%  # filter out data from outside sampling period
+  filter(!is.na(session), !is.na(ended)) %>% # unfinished sessions
+  filter(data_ok == 1) %>% # participant indicated unserious answers (up to here: 1495 observations)
+  filter(is.na(study_degree_year) | study_degree_year < 3) %>% # finished studying previous to 2017 (up to here: 1476 observations)
+  
+  # identity() for seamless modification of the code above. This allows
+  # the user to comment the last line of the pipe-chain without having to adjust
+  # the code by removing the pipe from the end of the previous line
+  identity()
+```
+
+
+### Surprising age
+Some people are surprisingly young. Maybe typos in the age field? Otherwise, they seem to be normal students and have not left any comments. For us, it seems most likely that participants who indicate an age of 14 or 15 while studying e.g. in their 5th master's term either paid little attention or did not answer seriously. We therefore exclude participants who indicated an age of 14 or 15 (9 cases). The two 17-year-old participants in their first bachelor's term seem plausible however.
+```{r}
+main_step01 %>% pull(age) %>% table()
+
+(surprising_age <- main_step01 %>% filter(age < 18))
+
+surprising_age %>% 
+  select(study_stage_mc, semester, age)
+
+main_step01 <- main_step01 %>% 
+  filter(age >16) # (up to here: 1467 observations)
+```
+
+### Illogical responses
+This code chunk allows to check for illogical responses. An example of what we are looking for: A participant responds that she has never preregistered a study (coded `"6"`) , but also that she has preregistered her bachelor's thesis (coded `"3"`, full answer: `"6, 3"`). Such an answer was technically possible, but would be illogical and indicate problems with the answer. 
+Thus, with the code below, we look for observations that contain a `"6"` but have more than one character, indicating that apart from `"6"`, another answer was given. If we find such observations, they are excluded from further analysis.
+```{r exclusion_02}
+# create marker variable 
+# data frame is turned into long format in the process
+main_illogical <- main_step01 %>% 
+  gather(matches("qrp[0-9]"), matches("orp"), 
+         key = "practice", value = "answer") %>% 
+  mutate(illogical_answer = ifelse(answer %contains% "6" & nchar(answer) > 1, 
+                                   TRUE, FALSE)) 
+
+# look at how many problemativc observations there are
+n_prob_items <- main_illogical %>% 
+  select(illogical_answer) %>% 
+  filter(illogical_answer == TRUE) %>% 
+  nrow()
+
+n_prob_items / (main_illogical %>% nrow())
+
+# remove problematic observations
+# data frame is turned back to wide format
+# NAs are introduced in place of the problematic observations
+main_step02 <- main_illogical %>% 
+  filter(is.na(illogical_answer) | illogical_answer == FALSE) %>% 
+  spread(key = "practice", value = "answer")
+```
+
+## Prepare date data
+```{r date_data}
+main_step03 <- main_step02 %>% 
+  # prepare time data
+  mutate(created = ymd_hms(created),  # transformation into ymd_hms format
+         ended = ymd_hms(ended), # transformation into ymd_hms format
+         length = dseconds(interval(created, ended))) %>%  # create duration vector
+  identity()
+```
+
+## Fix participant typos
+
+In this chunk, a named vector is defined that is later used to correct typos in the names of participants' denoted universities. Each element is built as `"pattern" = "replacement"`, where the pattern is a regular expression. 
+```{r string_replacement}
+string_replacement <- c(
+  ".*[rR]eg.*" = "Universität Regensburg", 
+  ".*[Kk]öln.*" = "Universität zu Köln",
+  ".*SRH.*" = "SRH Heidelberg",
+  ".*[Gg]ueri.*" = "Otto-von-Guericke-Universität Magdeburg",
+  ".*[Ww]ürz.*" = "Julius-Maximilians-Universität Würzburg",
+  ".*[Rr][Ww][Tt][Hh].*" = "RWTH Aachen",
+  ".*[Aa]a?chen.*" = "RWTH Aachen",
+  ".*LMU.*" = "Ludwig-Maximilians-Universität München",
+  ".*[oO]snabrück.*" = "Universität Osnabrück",
+  ".*[Gg]roningen.*" = "University of Groningen",
+  ".*fresenius.*" = "Hochschule Fresenius Düsseldorf")
+
+# The code below allows for the inspection of the strings that are matched by 
+# the patterns specified in the code above.
+patterns <- names(string_replacement)
+# map(patterns, function(x) str_extract(main$uni_current, x) %>% unique())
+str_extract(main_step03$uni_current, patterns[1]) %>% unique()
+
+# The code below now uses the `string_replacement` vector from above to 
+# correct typos in the main data frame.
+main_step04 <- main_step03 %>% 
+  mutate(uni_current = str_replace_all(uni_current, string_replacement),
+         uni_bachelor = str_replace_all(uni_bachelor, string_replacement))
+
+# The code below replaces answers like `----` in `uni_current` with `NA`.
+str_extract(main_step04$uni_current, ".*--.*") %>% unique()
+main_step04$uni_current[grepl(".*--.*", main_step04$uni_current)] <- NA
+```
+
+
+## Prepare Factors
+
+```{r}
+# helper object
+nosi_unis <- c(
+  "Ludwig-Maximilians-Universität München",
+  "Universität Koblenz-Landau",
+  "Fern-Universität in Hagen",
+  "Westfälische Wilhelms-Universität Münster",
+  "Georg-August-Universität Göttingen",
+  "Universität Wien",
+  "Humboldt-Universität Berlin",
+  "Universität Leipzig",
+  "Philipps-Universität Marburg",
+  "Universität zu Köln",
+  "Universität Zürich",
+  "Goethe-Universität Frankfurt",
+  "Technische Universität Dresden"
+)
+```
+
+
+```{r factor_definition}
+main_step05 <- main_step04 %>% 
+  # mutate(uni_current = factor(uni_current)) %>% 
+  mutate(study_stage_mc = factor(study_stage_mc, 
+                                 labels = c("Bachelor", 
+                                            "Master", 
+                                            "I don't study (any more)", 
+                                            "Other")),
+         
+         field_of_study_mc = factor(field_of_study_mc,
+                                    labels = c("Psychology", 
+                                               "Other")),
+         
+         emp_experience = factor(emp_experience,
+                                 labels = c("Yes", "No")),
+         
+         study_degree = factor(study_degree, levels = 1:5,
+                               labels = c("B.Sc.", 
+                                          "M.Sc.", 
+                                          "Diploma", 
+                                          "B.A.", 
+                                          "M.A.")),
+         
+         study_degree_field = factor(study_degree_field, 
+                                     labels = c("Psychology", 
+                                                "Other")),
+         
+         sex = factor(sex, 
+                      labels = c("male", "female", "diverse", "no answer")),
+         
+         rc_teaching = factor(rc_teaching, 
+                              labels = c("Did hear of RC", 
+                                         "Did not hear of RC", 
+                                         "I don't know")),
+         
+         nosi = factor(nosi, labels = c("Yes", "No", "Not Sure")),
+         
+         nosi_at_uni = ifelse(uni_current %in% nosi_unis, "Yes", "No"),
+         
+         nosi_events_mc = factor(nosi_events_mc, 
+                                 labels = c("Yes", "No", "Not Sure")))
+```
+
+## Number of Projects per Participant
+
+Include number of projects done per participant and a dummy variable for each individual project per participant.
+```{r}
+main_step06 <- main_step05 %>% 
+  # n_of_projects
+  mutate(n_projects_total = str_count(exp_specific, "[0-9]")) %>% 
+  mutate(n_projects_total = ifelse(is.na(n_projects_total), 0, n_projects_total)) %>% 
+  
+  # project dummies
+  mutate(n_emp.intern = str_count(exp_specific, "1"),
+         n_project =    str_count(exp_specific, "2"),
+         n_thesis.bsc = str_count(exp_specific, "3"),
+         n_thesis.msc = str_count(exp_specific, "4"),
+         n_other =      str_count(exp_specific, "5"))
+```
+
+## last tidying
+```{r}
+main <- main_step06 %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  select(-(1:6), -illogical_answer)
+```
+
+
+## Take a look
+```{r}
+main
+```
+
+# Data set for descriptives
+
+```{r}
+main_descriptives <- main_step06 %>%
+  select(age, sex, semester, study_stage_mc, study_stage_open, 
+         uni_bachelor, uni_current, study_degree, study_degree_field, 
+         study_degree_year, study_degree_yesno, comments, exp_specific)
+```
+
+## Clean Answers about statistical software
+```{r}
+# regex and replacement for custom answers
+stats_repl2 <- c(
+  "[Ss][Pp][Ss][Ss]" = "SPSS",
+  "^[Rr].*" = "R",
+  "_[Rr]$" = "R",
+  "G-Power" = "G*Power",
+  "[Ss][Tt][Aa][Tt][Aa]" = "STATA",
+  "[Jj]amovi" = "Jamovi",
+  "SYSTAT" = "Systat",
+  "Amos" = "AMOS"
+  )
+
+# find maximum number of given answers to know how many columns need to be created
+main %>% pull(software1) %>% str_count(",") %>% max()
+main %>% pull(software1) %>% unique()
+
+# separate variable and clean data
+stats <- main %>% 
+  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
+  select(software1) %>% 
+  # mutate(software1 = str_replace_all(software1, stat)) %>% 
+  separate(software1, 
+           into = paste0("software", 1:4),
+           sep = ",") %>% 
+  gather(1:4, key = "answer", value = "software") %>% 
+  mutate(software = str_replace_all(software, stats_repl2)) %>% 
+  group_by(software) %>% 
+  summarise(n = n()) %>% 
+  filter(!is.na(software)) %>% 
+  arrange(n %>% desc()) 
+
+# remove some rows with bad data
+stats <- stats %>% 
+  filter(software != "keine Ahnung") %>%  # "keine Ahnung" means "no idea"
+  filter(software != "SPSS und R") %>%  # answer in wrong format
+  filter(software != "?") %>% 
+  filter(software != "/") %>% 
+  filter(software != "-----")
+
+# re-add the SPSS and R use from removed row
+stats[stats$software=="SPSS",]$n <- stats[stats$software=="SPSS",]$n + 1
+stats[stats$software=="R",]$n <- stats[stats$software=="R",]$n + 1
+```
+
+# Save Data
+
+```{r save data}
+write_csv(main, "data/main.csv")
+
+# here, the main_allunis.csv data can be created when using the raw data set.
+# write_csv(main, "data/main_allunis.csv")
+
+saveRDS(stats, "data/stats_software.rds")
+```
+
+

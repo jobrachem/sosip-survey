@@ -1,0 +1,204 @@
+---
+title: "Data Wrangling - Creating a long data frame"
+subtitle: "PsyFaKo Open Science Survey"
+author: "Johannes Brachem"
+date: "Last update: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+---
+
+Purpose: Create a long data frame for the analysis of answers about research practices.
+
+# Header
+## Load Packages
+```{r packages}
+library(formr)
+library(tidyverse)
+```
+
+## Session Info
+```{r session info}
+sessionInfo()
+```
+
+## Import Data
+
+```{r import data}
+main <- read_csv("data/main.csv")
+```
+
+## Tidying answers about research practices
+
+### Function definition
+This function does a lot of work for us. It tidies the answers to our questions about research practices.
+
+The helper function `find_one_rp()` identifies, whether a specific research practice was applied in a specific project. Which practice it looks for depends on the input vector `research_practice`, and which project it looks for depends on `index`: If we supply `research_practice = main$qrp01` and `index = 1`, it tells us for each subject, whether QRP01 was applied to project one ("Expra / Empra") by this subject.
+
+Next, a named vector `projects` is defined. This one will serve as input to `find_one_qrp`.
+
+Next, with `map_dfc()` we apply the function `find_one_rp()` to each element of `projects`, thus looking for the same QRP in all projects. Each iteration takes the same `x` vector as input, which is the reason why we look for the same QRP in each iteration. The function `map_dfc` returns a data frame (tibble), with the results of our search neatly organized in columns.
+
+In the final step, we give each column a name that allows us to identify the research practice and the project that it refers to. For this, we need to know which research practice we were looking for, which is why `spread_practices()` has an argument `name`. This will be something like `"qrp01"`. The function `paste0()` allows us to combine the name of the qrp with the name of the project, returning for example `qrp01_expra`.
+
+```{r spread_practices}
+spread_practices <- function(research_practice, name) {
+  
+  # helper function
+  find_one_rp <- function(research_practice, project_index) {
+    out <- ifelse(research_practice %contains% project_index, TRUE, FALSE)
+    return(out)
+  }
+  
+  # define projects vector
+  projects <- c("_emp.intern" = "1", 
+                "_project" = "2",
+                "_thesis.bsc" = "3", 
+                "_thesis.msc" = "4", 
+                "_other" = "5")
+  
+  # apply helper function for each project
+  out <- map_dfc(projects, find_one_rp, research_practice = research_practice)
+  
+  # add information about research practice to colname
+  names(out) <- paste0(name, names(projects))
+  
+  # return the object
+  return(out)
+}
+```
+
+### Apply the function to each research practice
+Now, some more magic happens. From the main data frame, we select only the columns that contains participants' answers to the research-practice-questions.
+
+Next, we apply `spread_practices()` to each column of this data frame using `map2_dfc()`, and also hand over the names of those columns. The function again conveniently returns a well-organized data frame.
+
+```{r practices_aggregation}
+practices_aggregation <- main %>% 
+  select(matches("qrp[0-9]"), matches("orp")) %>% 
+  map2_dfc(names(.), spread_practices) # map2 iterates over 2 vectors simultaneously
+```
+
+#### Take a look
+```{r}
+practices_aggregation
+```
+
+### Attach aggregated answers
+
+Now we attach the aggregated answers to our main data frame.
+
+```{r main: attach practices_aggregation}
+main_practices <- bind_cols(main, practices_aggregation)
+```
+
+### Wrangle aggregated data set
+```{r qrp_names and orp_names}
+qrp_names <- c("SR of Variables", 
+               "No Sample Planning", 
+               "Flexible Sample Size", 
+               "SR of Conditions", 
+               "Flexible Analysis", 
+               "Flexible Exclusion", 
+               "SR of Hypotheses", 
+               "HARKing", 
+               "Rounding p-Values")
+
+orp_names <- c("Power Analysis", "Preregistration")
+```
+
+Turn data frame into long format and split "practice_project" column into two
+```{r df_practices turned into long}
+df_practices <- main_practices %>% 
+  mutate(id = 1:nrow(.)) %>% # create ID for participants
+  
+  # make long data frame
+  gather(qrp01_emp.intern:orp02_other, 
+         key = "practice_project", value = "rp_applied") %>% 
+  separate(practice_project, into = c("practice", "project"), sep = "_") %>% 
+  
+  # did the participant conduct a specific project?
+  mutate(project_digit = factor(project, levels = c("emp.intern",
+                                                    "project",
+                                                    "thesis.bsc",
+                                                    "thesis.msc",
+                                                    "other"),
+                                labels = 1:5)) %>%
+  mutate(project_conducted = ifelse(exp_specific %contains% project_digit, 
+                                    TRUE, FALSE)) %>% 
+  
+  # if project was not conducted rp_applied should be NA
+  mutate(rp_applied = ifelse(project_conducted, rp_applied, NA)) %>% 
+  
+  # identify university, where a project was most likely conducted
+  # mutate(uni_project = ifelse(study_stage_mc !=
+  #                               "Bachelor" &
+  #                               (project == "thesis.bsc" |
+  #                                  project == "emp.intern" |
+  #                                  semester <2) & project != "thesis.msc",
+  #                             uni_bachelor, as.character(uni_current))) %>%
+  
+  # make factors easier to read
+  mutate(practice = factor(practice, labels = c(orp_names, qrp_names))) %>% 
+  mutate(type_of_practice = ifelse(practice %in% qrp_names, 
+                                   "Questionable", "Open")) %>% 
+  # mutate(project = factor(project,
+  #                         levels = c("emp.intern",
+  #                                    "thesis.bsc",
+  #                                    "thesis.msc",
+  #                                    "project",
+  #                                    "other"),
+  #                         labels = c("Expra",
+  #                                    "Bachelor's Thesis",
+  #                                    "Master's Thesis",
+  #                                    "Project",
+  #                                    "Other"))) %>%
+  
+  # how many projects has an individual conducted?
+  group_by(id, practice) %>% 
+  mutate(n_projects = sum(project_conducted)) %>% 
+  ungroup() %>% 
+  
+  # how many open/questionable practices has an individual applied?
+  # max can be 45 for QRPs (9 practices, 5 projects) and 10 for ORPs
+  group_by(id, type_of_practice) %>% 
+  mutate(n_type_of_practice = sum(rp_applied, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  
+  # how many open/questionable practices has an individual applied on average
+  # per conducted project?
+  mutate(n_practice_per_project = ifelse(n_projects == 0, 
+                                                 NA, n_type_of_practice / n_projects)) %>% 
+  
+  # how many open/questionable practices has an individual applied
+  # for a respective project?
+  group_by(id, type_of_practice, project) %>% 
+  mutate(n_practice_per_type_of_project = sum(rp_applied, na.rm = TRUE)) %>% 
+  mutate(n_practice_per_type_of_project = ifelse(project_conducted,
+                                                 n_practice_per_type_of_project,
+                                                 NA)) %>% 
+  
+  # select relevant variables
+  select(id, project, project_conducted, practice, type_of_practice, 
+         n_type_of_practice, rp_applied, n_projects, n_practice_per_project, n_practice_per_type_of_project, nosi_at_uni, field_of_study_mc, study_degree_field, emp_experience) %>%
+  arrange(id) %>% 
+  ungroup() %>% 
+  identity()
+```
+
+#### Take a look
+We peek at the observations for the firstsubject. Note that there are 11 practices and five projects we ask about, cumulating to 55 rows **per subject** in long format.
+```{r}
+df_practices %>%  print(n = 55)
+```
+
+#### Save
+```{r}
+write_csv(df_practices, "data/df_practices.csv")
+```
+

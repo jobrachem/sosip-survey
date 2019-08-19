@@ -1,0 +1,138 @@
+---
+title: "Descriptives"
+subtitle: "PsyFaKo Open Science Survey"
+author: "Johannes Brachem"
+date: "Last update: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+---
+
+# Header
+
+## Load Packages
+```{r packages}
+library(tidyverse)
+library(skimr)
+library(formr)
+```
+
+## Session Info
+```{r session info}
+sessionInfo()
+```
+
+## Import Data
+
+```{r import data}
+main <- read_csv("data/main.csv")
+
+n_obs_uni <- read_csv("data/n_observations_uni.csv")
+```
+
+# All Psychology Students
+
+```{r}
+main_descriptives_full<- main %>% 
+  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
+  select(age, sex, semester, study_stage_mc, study_stage_open, 
+         uni_bachelor, uni_current, study_degree, study_degree_field, 
+         study_degree_year, study_degree_yesno, comments, exp_specific)
+
+
+# Number of included participants.
+(n_participants_full <- main_descriptives_full %>% nrow())
+
+# General overview
+main_descriptives_full %>% skim()
+
+# Participants' genders
+main_descriptives_full %>% pull(sex) %>% table()
+
+# Percentages of participants' genders
+(main_descriptives_full %>% pull(sex) %>% table()) / n_participants_full * 100
+
+# Look at age distribution
+main_descriptives_full %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
+main_descriptives_full %>% pull(age) %>% table()
+
+# Raw number of participants per semester and study stage
+main_descriptives_full %>% 
+  filter(study_stage_mc != "Other") %>% 
+  filter(semester < 11) %>% 
+  mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
+  mutate(semester = factor(semester, 
+                           labels = c("1/2", "3/4", "5/6", "7/8", "9/10"))) %>% 
+  group_by(semester, study_stage_mc) %>% 
+  summarise(n = n()) %>% 
+  arrange(study_stage_mc)
+
+# Percentages of participants in different study stages
+(main_descriptives_full %>% pull(study_stage_mc) %>% 
+    table()) / n_participants_full *100
+```
+
+# Participants with empirical experience
+Sample description for the participants who indicated that they have so far conducted at least one empirical project in the course of their studies.
+
+```{r}
+main_descriptives_filtered <- main %>% 
+  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
+  filter(emp_experience == "Yes") %>% 
+  select(age, sex, semester, study_stage_mc, study_stage_open, 
+         uni_bachelor, uni_current, study_degree, study_degree_field, 
+         study_degree_year, study_degree_yesno, comments, exp_specific)
+
+# Number of included participants.
+(n_participants <- main_descriptives_filtered %>% nrow())
+
+# General overview
+main_descriptives_filtered %>% skim()
+
+# Participants' genders
+main_descriptives_filtered %>% pull(sex) %>% table()
+
+# Percentages of participants' genders
+(main_descriptives_filtered %>% pull(sex) %>% table()) / n_participants * 100
+
+# Look at age distribution
+main_descriptives_filtered %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
+main_descriptives_filtered %>% pull(age) %>% table()
+
+# Percentages of participants in different study stages
+(main_descriptives_filtered %>% pull(study_stage_mc) %>% table()) / n_participants *100
+
+# Raw number of participants per semester and study stage
+main_descriptives_filtered %>% 
+  filter(study_stage_mc %in% c("Bachelor", "Master")) %>% 
+  mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
+  mutate(semester = ifelse(semester > 10, 11, semester)) %>% 
+  mutate(semester = factor(semester, 
+                           labels = c("1/2", "3/4", "5/6", "7/8", "9/10", ">10"))) %>% 
+  group_by(semester, study_stage_mc) %>% 
+  summarise(n = n()) %>% 
+  arrange(study_stage_mc)
+
+# Number of Projects
+main_descriptives_filtered$exp_specific %contains% "1" %>% sum() # Expra
+main_descriptives_filtered$exp_specific %contains% "2" %>% sum() # Project
+main_descriptives_filtered$exp_specific %contains% "3" %>% sum() # Bachelor's Thesis
+main_descriptives_filtered$exp_specific %contains% "4" %>% sum() # Master's Thesis
+main_descriptives_filtered$exp_specific %contains% "5" %>% sum() # Other
+```
+
+## Data points per university (emp experience subset)
+These numbers concern only the subset of participants who indicated that they have conducted at least one empirical project in the course of their studies. We count psychology students and former psychology students who graduated 2017 or later. Subjects who studied at two different universities for their bachelor's and master's degree are counted as a data point for each of the universities.
+
+```{r}
+# Data points per university
+n_obs_uni %>% arrange(desc(n)) %>% print(n = nrow(.))
+
+# Total number of data points
+n_obs_uni %>% pull(n) %>% sum()
+```

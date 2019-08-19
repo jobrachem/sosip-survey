@@ -1,0 +1,204 @@
+---
+title: "Analysis - Part 2"
+subtitle: "PsyFaKo Open Science Survey"
+author: "Johannes Brachem"
+date: "Last update: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+---
+
+```{r include=FALSE}
+# knitr::opts_chunk$set(echo=FALSE)
+```
+
+
+# Header
+## Load Packages
+```{r packages}
+library(tidyverse)
+```
+
+## Session Info
+```{r session info}
+sessionInfo()
+```
+
+## Import Data
+
+```{r import data}
+main <- read_csv("data/main.csv") %>%
+  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology")
+stats <- readRDS("data/stats_software.rds")
+```
+
+```{r}
+# global variables
+n_participants <- nrow(main)
+```
+
+
+# Question Block 3: Teaching Coverage, Attitudes
+
+## Specific QRPs in teaching
+Which of these research practices have been talked about in a critical way in the course of your studies?
+```{r QRPs mentioned critically}
+q_qrp_t.spec <- main %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  select(id, study_stage_mc, semester, specific_qrps_teaching) %>% 
+  separate(specific_qrps_teaching, into = paste0("qrp.t", 1:11)) %>% 
+  gather(qrp.t1:qrp.t11, key = "answer_number", value = "qrp_id") %>% 
+  drop_na(qrp_id) %>% 
+  mutate(qrp = dplyr::recode(qrp_id, 
+                             "1" = "SR of Variables", 
+                             "2" =    "No Sample Planning", 
+                             "3" =     "Flexible Sample Size", 
+                             "4" =    "SR of Conditions", 
+                             "5" =   "Flexible Analysis", 
+                             "6" =    "Flexible Exclusion", 
+                             "7" =    "SR of Hypotheses", 
+                             "8" =   "HARKing", 
+                             "9" =    "Rounding p-Values", 
+                             "10" =   "None", 
+                             "11" =   "Not Sure")) %>% 
+  select(-answer_number, -qrp_id)
+
+q_qrp_t.spec %>% 
+  group_by(qrp) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_participants * 100) %>% arrange(share %>% desc())
+```
+
+## Replication Crisis in any lecture
+
+Did you hear about the replication crisis in a lecture?
+```{r RC in any lecture}
+rc_teaching_general <- main %>% 
+  # summarise semesters into year-chunks, 
+  # filter(study_stage_mc != "Other") %>% 
+  mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
+  mutate(semester = ifelse(semester > 10, 11, semester)) %>% 
+  mutate(semester = factor(semester, 
+                           labels = c("1/2", "3/4", "5/6", 
+                                      "7/8", "9/10", ">10"))) %>% 
+  
+  # select relevant variables and summarise
+  select(rc_teaching, semester, study_stage_mc) %>% 
+  group_by(rc_teaching, semester, study_stage_mc) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  
+  # number of participants per semester and study stage
+  group_by(semester, study_stage_mc) %>% 
+  mutate(n_semester = sum(n)) %>% 
+  ungroup() %>% 
+  
+  # share with respect to students in the same study stage and semester
+  mutate(share = (n / n_semester) * 100)
+
+# print
+rc_teaching_general %>% 
+  arrange(study_stage_mc) %>%  
+  print(n = nrow(.))
+```
+
+## Replication Crisis in which lectures
+In which lectures did you hear about the replication crisis?
+```{r RC in which lectures}
+q_rc_t.spec <- main %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  separate(rc_teaching_specific, into = paste0("t", 1:11)) %>% 
+  select(id, study_stage_mc, semester, t1:t11) %>% 
+  gather(t1:t11, key = "answer_number", value = "lecture_id") %>% 
+  drop_na(lecture_id) %>% 
+  mutate(lecture = dplyr::recode(lecture_id, 
+                                 "1" = "General Psychology",
+                                 "2" = "Work, Organizational and Economic Psychology",
+                                 "3" = "Biological- / Neuropsychology",
+                                 "4" = "Diagnostics",
+                                 "5" = "Differential Psychology",
+                                 "6" = "Introductory Class",
+                                 "7" = "Developmental Psychology",
+                                 "8" = "Health Psychology",
+                                 "9" = "Clinical Psychology",
+                                 "10" = "Media- / Communication Psychology",
+                                 "11" = "Methods, Stats, Expra",
+                                 "12" = "Pedagogical Psychology",
+                                 "13" = "Forensic",
+                                 "14" = "Social Psychology",
+                                 "15" = "Other")) %>% 
+  select(-answer_number, -lecture_id)
+
+q_rc_t.spec %>% 
+  group_by(lecture) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_participants * 100) %>% arrange(share %>% desc())
+```
+
+## Attitudes towards replication crisis and open science
+
+```{r}
+# table of answers for the three questions
+# 1: "not at all"
+# 5: "very much"
+main %>% 
+  select(interest, importance, felt_information) %>% 
+  map(table)
+```
+
+# Question Block 4: Other
+
+## Statistical Software
+
+```{r}
+# print
+stats %>% print(n = nrow(.))
+```
+
+## Open Science Initiatives
+Do you know of an open science initiative at your university?
+```{r}
+# light wrangling
+nosi_aggregation <- main %>% select(nosi, uni_current, nosi_at_uni) %>% 
+  group_by(uni_current, nosi_at_uni, nosi) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  mutate(nosi = factor(nosi, levels = c("No", "Not Sure", "Yes"))) %>% 
+  arrange(desc(nosi_at_uni))
+
+# compute shares
+nosi_agg2 <- nosi_aggregation %>% 
+  group_by(uni_current) %>% 
+  mutate(n_answers = sum(n)) %>% 
+  filter(nosi == "Yes") %>% 
+  mutate(share_yes = (n / n_answers) * 100) %>% 
+  select(uni_current, nosi_at_uni, n_answers, share_yes) %>% 
+  arrange(desc(share_yes))
+
+# print
+nosi_agg2
+```
+
+Have you heard of open science events (e.g. workshops or talks) at your university=
+```{r}
+nosi_events <- main %>% select(nosi_events_mc) %>% 
+  group_by(nosi_events_mc) %>% 
+  summarise(n = n())
+
+nosi_events
+```
+
+## Block 3
+```{r}
+block3 <- list(qrps_teaching = q_qrp_t.spec,
+               rc_teaching_general = rc_teaching_general,
+               rc_teaching_specific = q_rc_t.spec,
+               nosi_data = nosi_agg2,
+               nosi_events = nosi_events
+               )
+
+saveRDS(block3, "data/block3_results.rds")
+```

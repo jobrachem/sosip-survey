@@ -1,0 +1,214 @@
+---
+title: "Fragwürdige Forschungspraktiken in empirischen Projekten im Rahmen des Psychologie-Studiums"
+subtitle: "Ergänzende Materialien"
+author: "PsyFaKo Open Science AG"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output:
+  bookdown::word_document2: 
+    fig_caption: yes
+    reference_docx: manuscript-style-reference.docx
+  pdf_document: 
+    fig_caption: yes
+csl: apa.csl
+bibliography: references.bib
+lang: de
+---
+
+<!-- Hier werden Pakete geladen, die im Dokument benötigt werden. -->
+```{r load packages, include=FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+<!-- Hier werden Datensätze und R-Objekte importiert, um Daten/Analysen und Plots automatisch einfügen zu können. -->
+```{r import data, include=FALSE}
+main_descriptives <- read_csv("data/main_descriptives_filtered.csv")
+main_descriptives_full <- read_csv("data/main_descriptives_full.csv")
+n_participants_uni <- read_csv("data/n_participants_uni.csv")
+
+block2 <- readRDS("data/block2_results.rds")
+block3 <- readRDS("data/block3_results.rds")
+```
+
+# Ausführlichere Darstellung der Ergebnisse
+
+### Prävalenz von QRPs analog zu @John2012
+
+```{r plot03, echo=FALSE, fig.cap="Anteil Studierender, die die jeweilige Forschungspraktik mindestens einmal in einem empirischen Forschungsprojekt im Rahmen des Studiums eingesetzt haben. S.B. = Selektives Berichten."}
+knitr::include_graphics('../plots/german/plot03_ger.png')
+```
+
+### Detailaggregation
+
+Diese detaillierte Aufschlüsselung wurde von uns in der Registrierung unserer Umfrage vorgesehen, erschien uns aber für den Endbericht zu wenig prägnant. Daher zeigen wir sie hier in den zusätzlichen Materialien.
+
+```{r, echo=FALSE}
+block2$q04 %>% 
+  ungroup() %>% 
+  mutate(practice = recode(practice,
+                         "HARKing" = "HARKing",
+                         "No Sample Planning" = "Keine Stichprobenplanung",
+                         "SR of Variables" = "S.B. von Variablen",
+                         "SR of Hypotheses" = "S.B. von Hypothesen",
+                         "Flexible Sample Size" = "Flexible Stichprobengröße",
+                         "Flexible Exclusion" = "Flexibler Ausschluss von Beob.",
+                         "SR of Conditions" = "S.B. von Bedingungen",
+                         "Flexible Analysis" = "Flexible Datenanalyse",
+                         "Rounding p-Values" = "Runden von p-Werten",
+                         "Not Sure" = "Nicht sicher",
+                         "None" = "Keine",
+                         "Power Analysis" = "Power Analyse",
+                         "Preregistration" = "Präregistrierung"
+                         )) %>% 
+  mutate(project = recode(project,
+                          "emp.intern" = "Expra",
+                          "other" = "Anderes",
+                          "project" = "Projektarbeit",
+                          "thesis.bsc" = "Bachelorarbeit",
+                          "thesis.msc" = "Masterarbeit")) %>% 
+  mutate(type_of_practice = recode(type_of_practice,
+                                   "Open" = "Offen",
+                                   "Questionable" = "Fragwürdig")) %>% 
+  mutate(share = share %>% round(1) %>% format(nsmall = 1)) %>% 
+  rename(`Forschungspraktik (FP)` = practice,
+         `Art der FP` = type_of_practice,
+         Projekt = project,
+         n = n_project,
+         `n (Angew.)` = n,
+         `Anteil (%)` = share) %>% 
+  kable(caption = "Detaillierte Darstellung der Häufigkeit einzelner Forschungspraktiken nach Projekt. Die Spalte \"n\" gibt an, wie viele Datenpunkte zu einem Projekt vorliegen. Die Spalte \"n (Angew.)\" gibt an, in wie vielen Projekten die jeweilige Forschungspraktik verwendet wurde.")
+```
+
+
+## Zusätzliche Ergebnisse
+
+### Thematisierung der Repliaktionskrise - Aggregiert
+
+```{r, echo=FALSE}
+# a little wasteful workaround to get the correct number of students per
+# study stage
+tmp <- main_descriptives_full %>% 
+           group_by(study_stage_mc) %>% 
+           summarise(n = n()) %>% 
+  arrange(study_stage_mc) %>% 
+  pull(n)
+
+block3$rc_teaching_general %>%
+  arrange(study_stage_mc) %>% 
+  mutate(n_sum = recode(study_stage_mc, 
+                        "Bachelor" = tmp[1], 
+                        "I don't study (any more)" = tmp[2], 
+                        "Master" = tmp[3], 
+                        "Other" = tmp[4])) %>% 
+  mutate(rc_teaching = factor(rc_teaching, 
+                              levels = c("Did hear of RC", 
+                                         "Did not hear of RC", 
+                                         "I don't know"), 
+                              labels = c("Ja", "Nein", "Weiß nicht"))) %>% 
+  mutate(study_stage_mc = factor(study_stage_mc,
+                                 levels = c("Bachelor", "Master", "Other", 
+                                            "I don't study (any more)"),
+                                 labels = c("Bachelor", "Master", "Anderer", 
+                                            "Studiere nicht (mehr)"))) %>% 
+  group_by(rc_teaching, study_stage_mc) %>%
+  mutate(n_answer = sum(n)) %>%
+  mutate(share = (n_answer / n_sum) * 100) %>%
+  distinct(share, rc_teaching, n_sum) %>%
+  select(study_stage_mc, rc_teaching, n_sum, share) %>% 
+  arrange(study_stage_mc) %>% 
+  mutate(share = share %>% round(1) %>% format(nsmall = 1)) %>% 
+  rename(`RK behandelt` = rc_teaching,
+         Studienabschnitt = study_stage_mc,
+         n = n_sum,
+         `Anteil (%)` = share) %>% 
+  kable(caption = "Anteil von Studierenden im jeweiligen Studienabschnitt, die in einer Lehrveranstaltung an ihrer aktuellen, bzw. letzten (bei Alumni) Universität von der Replikationskrise gehört haben. Die Spalte \"n\" enthält die Größe der jeweiligen Teilstichprobe.")
+```
+
+### Thematisierung der Repliaktionskrise - Detailliert
+
+```{r, echo=FALSE}
+block3$rc_teaching_general %>% 
+  select(-n) %>% 
+  mutate(share = share %>% round(1) %>% format(nsmall = 1)) %>% 
+  mutate(rc_teaching = factor(rc_teaching, 
+                              levels = c("Did hear of RC", 
+                                         "Did not hear of RC", 
+                                         "I don't know"), 
+                              labels = c("Ja", "Nein", "Weiß nicht"))) %>% 
+  mutate(study_stage_mc = factor(study_stage_mc,
+                                 levels = c("Bachelor", "Master", "Other", 
+                                            "I don't study (any more)"),
+                                 labels = c("Bachelor", "Master", "Anderer", 
+                                            "Studiere nicht (mehr)"))) %>% 
+  arrange(study_stage_mc) %>% 
+  select(study_stage_mc, semester, rc_teaching, n_semester, share) %>% 
+  rename(`RK behandelt` = rc_teaching,
+         Semester = semester,
+         Studienabschnitt = study_stage_mc,
+         n = n_semester,
+         `Anteil (%)` = share) %>% 
+  kable(caption = "Anteil von Studierenden im jeweiligen Studienabschnitt und Semester, die in einer Lehrveranstaltung an ihrer aktuellen, bzw. letzten (bei Alumni) Universität von der Replikationskrise gehört haben. Die Spalte \"n\" enthält die Größe der jeweiligen Teilstichprobe. ")
+```
+
+### Thematisierung der Replikationskrise nach Lehrveranstaltung
+
+```{r, echo=FALSE}
+block3$rc_teaching_specific %>% 
+  mutate(answer = recode(answer,
+                         "Methods, Stats, Expra" = "Methodenlehre, Statistik, Expra",
+                         "Social Psychology" = "Sozialpsychologie",
+                         "General Psychology" = "Allgemeine Psychologie",
+                         "Introductory Class" = "Einführungsveranstaltung",
+                         "Diagnostics" = "Diagnostik",
+                         "Differential Psychology" = "Differentielle Psychologie",
+                         "Other" = "Andere",
+                         "Clinical Psychology" = "Klinische Psychologie",
+                         "Biological- / Neuropsychology" = "Biologische / Neuropsychologie",
+                         "Work, Organizational and Economic Psychology" = "Arbeits-, Betriebs- und Organisationspsychologie",
+                         "Pedagogical Psychology" = "Pädagogische Psychologie",
+                         "Developmental Psychology" = "Entwicklungspsychologie",
+                         "Health Psychology" = "Gesundheitspsychologie",
+                         "Media- / Communication Psychology" = "Medien- / Kommunikationspsychologie",
+                         "Forensic" = "Forensische Psychologie")) %>% 
+  mutate(share = share %>% round(1) %>% format(nsmall = 1)) %>% 
+  rename(`Lehrveranstaltung` = answer,
+         n = count,
+         `Anteil (%)` = share) %>% 
+  kable(caption = glue::glue("Anteil von Teilnehmenden, die in der jeweiligen Lehrveranstaltung an ihrer aktuellen (Alumni: letzten) Universität eine Thematisierung der Replikationskrise erfahren haben (N = {nrow(main_descriptives_full)})."))
+```
+
+
+### Thematisierung fragwürdiger Forschungspraktiken
+
+```{r, echo=FALSE}
+block3$qrps_teaching %>% 
+  mutate(answer = recode(answer,
+                         "HARKing" = "HARKing",
+                         "No Sample Planning" = "Keine Stichprobenplanung",
+                         "SR of Variables" = "S.B. von Variablen",
+                         "SR of Hypotheses" = "S.B. von Hypothesen",
+                         "Flexible Sample Size" = "Flexible Stichprobengröße",
+                         "Flexible Exclusion" = "Flexibler Ausschluss von Beob.",
+                         "SR of Conditions" = "S.B. von Bedingungen",
+                         "Flexible Analysis" = "Flexible Datenanalyse",
+                         "Rounding p-Values" = "Runden von p-Werten",
+                         "Not Sure" = "Nicht sicher",
+                         "None" = "Keine"
+                         )) %>% 
+  mutate(share = share %>% round(1) %>% format(nsmall = 1)) %>% 
+  rename(`Fragwürdige Forschungspraktik` = answer,
+         n = count,
+         `Anteil (%)` = share) %>% 
+  kable(caption = glue::glue("Anteil von Teilnehmenden, die an ihrer aktuellen (bei Alumni: letzten) Universität in mindestens einer Lehrveranstaltung eine kritische Betrachtung der jeweiligen Forschungspraktik erfahren haben (N = {nrow(main_descriptives_full)})."))
+
+```
+
+
+
+
+# Literatur
+<!-- Diese Einstellungen sorgen für die korrekte hängende Einrückung in der Literaturliste, wenn ein PDF produziert wird. -->
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent

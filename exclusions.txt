@@ -1,0 +1,9 @@
+Ausschluss:
+Aktuelle Universität in den Niederlanden: n = 2
+
+Umfrage im Erhebungszeitraum abgeschlossen: N = 1501
+-> Davon mit Angabe "Daten können verwendet werden": N = 1493
+-> Davon Studienabschluss später als 2016: N = 1475
+-> Davon älter als 16 (Ausschluss bei unter 16 wegen Implausibilität): N = 1466
+-> Davon Psychologie-Studierende oder Psycholog*innen: N = 1397
+-> Davon Personen, die schon einmal ein empirischen Projekt durchgeführt oder begonnen haben: N = 1146
