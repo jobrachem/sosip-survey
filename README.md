@@ -2,6 +2,10 @@
 
 This repository contains the data, code and manuscript for the *PsyFaKo Replication Crisis and Open Science Survey 2019*.
 
+## Project on the Open Science Framework
+
+You can find our project on the Open Science Framework: [https://osf.io/t3mak/](https://osf.io/t3mak/)
+
 ## How to reproduce our analyses
 
 1. Download or clone the repository from GitHub.
