@@ -15,22 +15,10 @@ output:
 
 # Header
 
-## Load Packages
-```{r packages}
-library(tidyverse)
-library(skimr)
-library(formr)
-```
-
-## Session Info
-```{r session info}
-sessionInfo()
-```
-
 ## Import Data
 
 ```{r import data}
-main <- read_csv("data/main.csv")
+wide <- read_csv("data/wide.csv")
 
 n_obs_uni <- read_csv("data/n_observations_uni.csv")
 ```
@@ -38,7 +26,7 @@ n_obs_uni <- read_csv("data/n_observations_uni.csv")
 # All Psychology Students
 
 ```{r}
-main_descriptives_full<- main %>% 
+wide_descriptives_full<- wide %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
   select(age, sex, semester, study_stage_mc, study_stage_open, 
          uni_bachelor, uni_current, study_degree, study_degree_field, 
@@ -46,23 +34,23 @@ main_descriptives_full<- main %>%
 
 
 # Number of included participants.
-(n_participants_full <- main_descriptives_full %>% nrow())
+(n_participants_full <- wide_descriptives_full %>% nrow())
 
 # General overview
-main_descriptives_full %>% skim()
+wide_descriptives_full %>% skim()
 
 # Participants' genders
-main_descriptives_full %>% pull(sex) %>% table()
+wide_descriptives_full %>% pull(sex) %>% table()
 
 # Percentages of participants' genders
-(main_descriptives_full %>% pull(sex) %>% table()) / n_participants_full * 100
+(wide_descriptives_full %>% pull(sex) %>% table()) / n_participants_full * 100
 
 # Look at age distribution
-main_descriptives_full %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
-main_descriptives_full %>% pull(age) %>% table()
+wide_descriptives_full %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
+wide_descriptives_full %>% pull(age) %>% table()
 
 # Raw number of participants per semester and study stage
-main_descriptives_full %>% 
+wide_descriptives_full %>% 
   filter(study_stage_mc != "Other") %>% 
   filter(semester < 11) %>% 
   mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
@@ -73,7 +61,7 @@ main_descriptives_full %>%
   arrange(study_stage_mc)
 
 # Percentages of participants in different study stages
-(main_descriptives_full %>% pull(study_stage_mc) %>% 
+(wide_descriptives_full %>% pull(study_stage_mc) %>% 
     table()) / n_participants_full *100
 ```
 
@@ -81,7 +69,7 @@ main_descriptives_full %>%
 Sample description for the participants who indicated that they have so far conducted at least one empirical project in the course of their studies.
 
 ```{r}
-main_descriptives_filtered <- main %>% 
+wide_descriptives_filtered <- wide %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
   filter(emp_experience == "Yes") %>% 
   select(age, sex, semester, study_stage_mc, study_stage_open, 
@@ -89,26 +77,26 @@ main_descriptives_filtered <- main %>%
          study_degree_year, study_degree_yesno, comments, exp_specific)
 
 # Number of included participants.
-(n_participants <- main_descriptives_filtered %>% nrow())
+(n_participants <- wide_descriptives_filtered %>% nrow())
 
 # General overview
-main_descriptives_filtered %>% skim()
+wide_descriptives_filtered %>% skim()
 
 # Participants' genders
-main_descriptives_filtered %>% pull(sex) %>% table()
+wide_descriptives_filtered %>% pull(sex) %>% table()
 
 # Percentages of participants' genders
-(main_descriptives_filtered %>% pull(sex) %>% table()) / n_participants * 100
+(wide_descriptives_filtered %>% pull(sex) %>% table()) / n_participants * 100
 
 # Look at age distribution
-main_descriptives_filtered %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
-main_descriptives_filtered %>% pull(age) %>% table()
+wide_descriptives_filtered %>% pull(age) %>% hist(main = "Age Histogram", xlab="age")
+wide_descriptives_filtered %>% pull(age) %>% table()
 
 # Percentages of participants in different study stages
-(main_descriptives_filtered %>% pull(study_stage_mc) %>% table()) / n_participants *100
+(wide_descriptives_filtered %>% pull(study_stage_mc) %>% table()) / n_participants *100
 
 # Raw number of participants per semester and study stage
-main_descriptives_filtered %>% 
+wide_descriptives_filtered %>% 
   filter(study_stage_mc %in% c("Bachelor", "Master")) %>% 
   mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
   mutate(semester = ifelse(semester > 10, 11, semester)) %>% 
@@ -119,11 +107,11 @@ main_descriptives_filtered %>%
   arrange(study_stage_mc)
 
 # Number of Projects
-main_descriptives_filtered$exp_specific %contains% "1" %>% sum() # Expra
-main_descriptives_filtered$exp_specific %contains% "2" %>% sum() # Project
-main_descriptives_filtered$exp_specific %contains% "3" %>% sum() # Bachelor's Thesis
-main_descriptives_filtered$exp_specific %contains% "4" %>% sum() # Master's Thesis
-main_descriptives_filtered$exp_specific %contains% "5" %>% sum() # Other
+wide_descriptives_filtered$exp_specific %contains% "1" %>% sum() # Expra
+wide_descriptives_filtered$exp_specific %contains% "2" %>% sum() # Project
+wide_descriptives_filtered$exp_specific %contains% "3" %>% sum() # Bachelor's Thesis
+wide_descriptives_filtered$exp_specific %contains% "4" %>% sum() # Master's Thesis
+wide_descriptives_filtered$exp_specific %contains% "5" %>% sum() # Other
 ```
 
 ## Data points per university (emp experience subset)

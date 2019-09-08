@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+author: "Johannes Brachem"
+date: "1 9 2019"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(flextable)
+library(tidyverse)
+source("code/helper_functions.R")
+```
+
+```{r}
+d <- mtcars %>% mutate(mpg = co(mpg)) %>% 
+  mutate_at(c(3,4), cop)
+
+myft <- flextable(
+  head(d), 
+  col_keys = c("am", "carb", "gear", "mpg", "drat" ))
+myft %>% align(j = 3:4, align = "right", part = "all") %>% 
+  colformat_num(col_keys =c("am", "carb", "gear", "drat"), digits = 2) %>% 
+  theme_booktabs() %>% 
+  autofit() %>%
+  fix_border_issues() %>% 
+  footnote(i = 1, j = 1, 
+           value = as_paragraph("This is a footnote"),
+           ref_symbols = "a")
+  
+```
+
+

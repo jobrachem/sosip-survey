@@ -12,7 +12,7 @@
 # packages and imports
 library(tidyverse)
 library(ggpubr)
-source("code/co.r")
+source("code/helpers/helper_functions.R")
 block2 <- readRDS("data/block2_results.rds")
 
 # part one: bar plots, aggregated share of qrp usage
@@ -20,7 +20,7 @@ block2 <- readRDS("data/block2_results.rds")
 ## preliminary wrangling
 
 ### getting the german names right
-practices_ger <- c("Rounding p-Values" = "Runden von p-Werten",
+practices_ger <- c("Rounding p-Values" = "p-Werte abrunden",
                    "Flexible Sample Size" = "Adaptives Nacherheben",
                    "HARKing" = "HARKing",
                    "SR of Hypotheses" = "SB von Hypothesen",

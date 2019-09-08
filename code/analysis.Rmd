@@ -1,5 +1,5 @@
 ---
-title: "Analysis - Part 1"
+title: "Descriptive Analysis"
 subtitle: "PsyFaKo Open Science Survey"
 author: "Johannes Brachem"
 date: "Last update: `r format(Sys.time(), '%d %B, %Y')`"
@@ -15,37 +15,29 @@ output:
 
 # Header
 ## Load Packages
-```{r packages}
-# library(formr)
-library(tidyverse)
-# library(lubridate)
-# library(knitr)
-# library(kableExtra)
-# library(glue)
-# library(skimr)
+
+```{r}
+source("code/helpers/helper_functions.R")
 ```
 
-## Session Info
-```{r session info}
-sessionInfo()
-```
 
 ## Import Data
 
 ```{r import data}
-main <- read_csv("data/main.csv") %>% 
-  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
-  filter(emp_experience == "Yes")
+wide <- read_csv("data/wide.csv") %>% 
+  only_psych() %>% filter(emp_experience == "Yes")
 
-df_practices <- read_csv("data/df_practices.csv")%>% 
-  filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
-  filter(emp_experience == "Yes")
+long <- read_csv("data/long.csv") %>% 
+  only_psych() %>% filter(emp_experience == "Yes")
+
+wide_all <- read_csv("data/wide.csv") %>% only_psych()
+stats <- readRDS("data/stats_software.rds")
 ```
 
 # Question Block 2: Research Practices
 
 ```{r}
-n_projects_total <- df_practices %>% 
+n_projects_total <- long %>% 
   distinct(id, n_projects) %>% 
   summarise(n = sum(n_projects, na.rm = TRUE)) %>% 
   pull(n)
@@ -65,12 +57,12 @@ The chunk below first sums up, how many QRPs and ORPs were totally applied by ea
 # Total scores: Total number of RP applications divided by total number of projects 
 # (not preregistered, not included in output)
 
-q01.0 <- df_practices %>% 
+q01.0 <- long %>% 
   group_by(type_of_practice) %>% 
   summarise(n = sum(rp_applied, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  mutate(n_projects = n_projects_total) %>% 
-  mutate(practices_per_project = n / n_projects_total)
+  mutate(n_projects = n_projects) %>% 
+  mutate(practices_per_project = n / n_projects)
 
 q01.0
 ```
@@ -79,7 +71,7 @@ q01.0
 # Mean over individual scores: Number of RP applications per project,
 # averaged across individuals (preregistered)
 
-q01 <- df_practices %>% 
+q01 <- long %>% 
   # number of applied practices (per individual and type of project)
   group_by(id, type_of_practice, n_projects) %>% 
   summarise(applied_practices = sum(rp_applied, na.rm = TRUE)) %>% 
@@ -89,7 +81,10 @@ q01 <- df_practices %>%
   # average over individuals
   group_by(type_of_practice) %>% 
   summarise(m = mean(practices_per_project),
-            sd = sd(practices_per_project))
+            sd = sd(practices_per_project),
+            med = median(practices_per_project),
+            minimum = min(practices_per_project),
+            maximum = max(practices_per_project))
 
 q01
 ```
@@ -99,7 +94,7 @@ q01
 How many open/questionable research practices were applied on average per project?
 
 ```{r}
-q02 <- df_practices %>% 
+q02 <- long %>% 
   group_by(id, type_of_practice, project, project_conducted) %>% 
   summarise(n_practice_appl = sum(rp_applied)) %>% 
   ungroup() %>% 
@@ -107,7 +102,10 @@ q02 <- df_practices %>%
   summarise(mean = mean(n_practice_appl, na.rm = TRUE), # mean number of applied practices per project
             sd = sd(n_practice_appl, na.rm = TRUE), # sd for number of applied practices per project
             n_conducted = sum(project_conducted), # number of conducted projects
-            n_applied = sum(n_practice_appl, na.rm=TRUE)) # number of practice applications
+            n_applied = sum(n_practice_appl, na.rm=TRUE), # number of practice applications
+            med = median(n_practice_appl, na.rm = T),
+            minimum = min(n_practice_appl, na.rm = T),
+            maximum = max(n_practice_appl, na.rm = T)) 
 
 q02
 ```
@@ -117,11 +115,11 @@ q02
 For every practice, we compute the share of participants who applied that practice *at least one* in any project. We only include participants who have conducted at least one empirical research project.
 
 ```{r}
-q03 <- df_practices %>% 
+q03 <- long %>% 
   filter(rp_applied) %>% 
   group_by(practice, type_of_practice) %>% 
   summarise(n = n_distinct(id)) %>% 
-  mutate(n_vp = nrow(main)) %>% 
+  mutate(n_vp = nrow(wide)) %>% 
   mutate(share = (n / n_vp)*100) %>% 
   arrange(share %>% desc()) %>% 
   identity()
@@ -133,21 +131,25 @@ q03
 ### Detailed Practice Aggregation
 
 ```{r}
-n_projects <- df_practices %>% 
+q04.n_projects <- long %>% 
   ungroup() %>% 
   distinct(id, project, project_conducted) %>% 
   group_by(project) %>% 
   summarise(n = sum(project_conducted)) %>% 
   mutate(order = c(1, 5, 2, 3, 4)) %>% 
-  arrange(order)
+  arrange(order) %>% 
+  arrange(project)
 
-df_practices$n_project <- rep(n_projects$n, times = nrow(df_practices) / 5)
+q04.d <- long %>% arrange(project) %>% 
+  mutate(q04.n = rep(q04.n_projects$n, each = nrow(long) / 5))
 
-q04 <- df_practices %>% 
+q04 <- q04.d %>% 
   ungroup() %>% 
-  group_by(practice, type_of_practice, project, n_project) %>% 
-  summarise(n = sum(rp_applied, na.rm = TRUE)) %>% 
-  mutate(share = (n / n_project)*100) %>% 
+  group_by(practice, type_of_practice, project, q04.n) %>% 
+  # group_by(practice) %>% 
+  summarise(n = sum(rp_applied, na.rm = TRUE)) %>% ungroup() %>% 
+  # group_by(practice, type_of_practice, project, q04.n) %>% 
+  mutate(share = (n / q04.n)*100) %>% 
   arrange(type_of_practice) %>% 
   identity()
 
@@ -168,7 +170,7 @@ answer | meaning
 6 | I never preregistered
 
 ```{r}
-prereg_where <- main %>% 
+prereg_where <- wide %>% 
   pull(prereg_where)
 
 prereg_counts <- as.character(1:6) %>% 
@@ -177,7 +179,8 @@ prereg_counts <- as.character(1:6) %>%
 names_prereg_where <- c("lecturer", "aspredicted.org", "osf.io", 
                         "journal", "other", "never preregistered")
 
-(prereg_where_data <- tibble(names_prereg_where, prereg_counts))
+prereg_where_data <- tibble(names_prereg_where, prereg_counts) %>% 
+  mutate(share = prereg_counts / nrow(wide))
 ```
 
 ```{r}
@@ -202,14 +205,16 @@ prereg_where_data %>%
 ### Share of practice applications
 For each practice, we look at the share of projects in which the respective practice was applied.
 ```{r}
-# 
-q05 <- df_practices %>% 
+n_proj <- long %>% distinct(id, project, project_conducted) %>% 
+  summarise(n = sum(project_conducted)) %>% pull(n)
+
+q05 <- long %>% 
   # filter(project %contains% "thesis.bsc" | project %contains% "thesis.msc") %>% 
   filter(rp_applied) %>% 
   group_by(practice, type_of_practice) %>% 
   summarise(n_applied = n()) %>% 
-  mutate(n_projects_total = n_projects_total) %>% 
-  mutate(share = (n_applied / n_projects_total)*100) %>% 
+  mutate(n_projects = n_proj) %>% 
+  mutate(share = (n_applied / n_projects)*100) %>% 
   arrange(share %>% desc())
 
 q05
@@ -218,7 +223,7 @@ q05
 ### Open Science Initiatives
 
 ```{r}
-nosi_q <- df_practices %>% 
+nosi_q <- long %>% 
   # number of applied practices (per individual and type of project)
   group_by(id, type_of_practice, n_projects, nosi_at_uni) %>% 
   summarise(applied_practices = sum(rp_applied, na.rm = TRUE)) %>% 
@@ -244,7 +249,203 @@ block2 <- list(q01 = q01,
 saveRDS(block2, "data/block2_results.rds")
 ```
 
+# Question Block 3: Teaching Coverage, Attitudes
+```{r}
+# global
+n_participants <- nrow(wide_all)
+```
 
+## Specific QRPs in teaching
+Which of these research practices have been talked about in a critical way in the course of your studies?
+```{r QRPs mentioned critically}
+q_qrp_t.spec <- wide_all %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  select(id, study_stage_mc, semester, specific_qrps_teaching) %>% 
+  separate(specific_qrps_teaching, into = paste0("qrp.t", 1:11)) %>% 
+  gather(qrp.t1:qrp.t11, key = "answer_number", value = "qrp_id") %>% 
+  drop_na(qrp_id) %>% 
+  mutate(qrp = dplyr::recode(qrp_id, 
+                             "1" = "SR of Variables", 
+                             "2" =    "No Sample Planning", 
+                             "3" =     "Flexible Sample Size", 
+                             "4" =    "SR of Conditions", 
+                             "5" =   "Flexible Analysis", 
+                             "6" =    "Flexible Exclusion", 
+                             "7" =    "SR of Hypotheses", 
+                             "8" =   "HARKing", 
+                             "9" =    "Rounding p-Values", 
+                             "10" =   "None", 
+                             "11" =   "Not Sure")) %>% 
+  select(-answer_number, -qrp_id)
+
+q_qrp_t.spec_share <- q_qrp_t.spec %>% 
+  group_by(qrp) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_participants * 100) %>% arrange(share %>% desc())
+```
+
+## Replication Crisis in any lecture
+
+Did you hear about the replication crisis in a lecture?
+```{r RC in any lecture}
+rc_teaching_general <- wide_all %>% 
+  # summarise semesters into year-chunks, 
+  # filter(study_stage_mc != "Other") %>% 
+  mutate(semester = ifelse(semester %% 2 == 0, semester - 1, semester)) %>% 
+  mutate(semester = ifelse(semester > 10, 11, semester)) %>% 
+  mutate(semester = ifelse(is.na(semester), "not applicable", semester)) %>% 
+  mutate(semester = factor(semester, levels = c(1, 3, 5, 7, 9, 11, "not applicable"),
+                           labels = c("1/2", "3/4", "5/6", 
+                                      "7/8", "9/10", ">10", "not applicable"))) %>% 
+  
+  # select relevant variables and summarise
+  select(rc_teaching, semester, study_stage_mc) %>% 
+  group_by(rc_teaching, semester, study_stage_mc) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  
+  # number of participants per semester and study stage
+  group_by(semester, study_stage_mc) %>% 
+  mutate(n_semester = sum(n)) %>% 
+  ungroup() %>% 
+  
+  # share with respect to students in the same study stage and semester
+  mutate(share = (n / n_semester) * 100)
+
+# print
+rc_teaching_general %>% 
+  arrange(study_stage_mc) %>%  
+  print(n = nrow(.))
+```
+
+Replication crisis in lectures by university
+```{r}
+rc_teaching_unis <- wide_all %>%
+  group_by(uni_current) %>% mutate(n_uni = n()) %>% ungroup() %>% 
+  group_by(uni_current, rc_teaching) %>% 
+  mutate(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_uni) %>% 
+  distinct(uni_current, n_uni, rc_teaching, n, share) %>% arrange(uni_current)
+
+rc_teaching_unis %>% 
+  mutate(share = (share*100) %>% round(1),
+         share = paste0("(", share, " %)")) %>% 
+  unite(n, share, col = "n", sep = " ") %>% 
+  spread(key = rc_teaching, value = n, fill = "0 (0 %)")
+
+rc_teaching_unis.out <- rc_teaching_unis %>% 
+  mutate(rc_teaching = factor(rc_teaching, levels = lab.rc_lectures,
+                              labels = c("yes", "no", "not_sure"))) %>% 
+  unite(n, share, col = "n_share", sep = "_") %>% 
+  spread(key = rc_teaching, value = n_share, fill = "0_0") %>% 
+  separate(yes, into = c("yes.n", "yes.share"), sep = "_") %>% 
+  separate(no, into = c("no.n", "no.share"), sep = "_") %>% 
+  separate(not_sure, into = c("not_sure.n", "not_sure.share"), sep = "_") %>% 
+  arrange(desc(yes.share)) %>% 
+  filter(n_uni >= 30) %>% 
+  mutate_at(vars(matches("share")), as.numeric) %>% 
+  mutate_at(vars(matches("share")), cop2)
+```
+
+
+## Replication Crisis in which lectures
+In which lectures did you hear about the replication crisis?
+```{r RC in which lectures}
+q_rc_t.spec <- wide_all %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  separate(rc_teaching_specific, into = paste0("t", 1:11)) %>% 
+  select(id, study_stage_mc, semester, t1:t11) %>% 
+  gather(t1:t11, key = "answer_number", value = "lecture_id") %>% 
+  drop_na(lecture_id) %>% 
+  mutate(lecture = dplyr::recode(lecture_id, 
+                                 "1" = "General Psychology",
+                                 "2" = "Work, Organizational and Economic Psychology",
+                                 "3" = "Biological- / Neuropsychology",
+                                 "4" = "Diagnostics",
+                                 "5" = "Differential Psychology",
+                                 "6" = "Introductory Class",
+                                 "7" = "Developmental Psychology",
+                                 "8" = "Health Psychology",
+                                 "9" = "Clinical Psychology",
+                                 "10" = "Media- / Communication Psychology",
+                                 "11" = "Methods, Stats, Expra",
+                                 "12" = "Pedagogical Psychology",
+                                 "13" = "Forensic",
+                                 "14" = "Social Psychology",
+                                 "15" = "Other")) %>% 
+  select(-answer_number, -lecture_id)
+
+q_rc_t.spec.share <- q_rc_t.spec %>% 
+  group_by(lecture) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_participants * 100) %>% arrange(share %>% desc())
+```
+
+## Attitudes towards replication crisis and open science
+
+```{r}
+# table of answers for the three questions
+# 1: "not at all"
+# 5: "very much"
+wide_all %>% 
+  select(interest, importance, felt_information) %>% 
+  map(table)
+```
+
+# Question Block 4: Other
+
+## Statistical Software
+
+```{r}
+# print
+stats %>% print(n = nrow(.))
+```
+
+## Open Science Initiatives
+Do you know of an open science initiative at your university?
+```{r}
+# light wrangling
+nosi_aggregation <- wide_all %>% select(nosi, uni_current, nosi_at_uni) %>% 
+  group_by(uni_current, nosi_at_uni, nosi) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  mutate(nosi = factor(nosi, levels = c("No", "Not Sure", "Yes"))) %>% 
+  arrange(desc(nosi_at_uni))
+
+# compute shares
+nosi_agg2 <- nosi_aggregation %>% 
+  group_by(uni_current) %>% 
+  mutate(n_answers = sum(n)) %>% 
+  filter(nosi == "Yes") %>% 
+  mutate(share_yes = (n / n_answers) * 100) %>% 
+  select(uni_current, nosi_at_uni, n_answers, share_yes) %>% 
+  arrange(desc(share_yes))
+
+# print
+nosi_agg2
+```
+
+Have you heard of open science events (e.g. workshops or talks) at your university=
+```{r}
+nosi_events <- wide_all %>% select(nosi_events_mc) %>% 
+  group_by(nosi_events_mc) %>% 
+  summarise(n = n())
+
+nosi_events
+```
+
+## Block 3
+```{r}
+block3 <- list(qrps_teaching = q_qrp_t.spec,
+               qrps_teaching_share = q_qrp_t.spec_share,
+               rc_teaching_general = rc_teaching_general,
+               rc_teaching_unis = rc_teaching_unis.out,
+               rc_teaching_specific = q_rc_t.spec,
+               rc_teaching_specific_share = q_rc_t.spec.share,
+               nosi_data = nosi_agg2,
+               nosi_events = nosi_events
+               )
+
+saveRDS(block3, "data/block3_results.rds")
+```
 
 
 

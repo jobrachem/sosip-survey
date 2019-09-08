@@ -7,13 +7,13 @@
 # packages and imports
 library(tidyverse)
 library(glue)
-df_practices <- read_csv("data/df_practices.csv")%>% 
+long <- read_csv("data/long.csv")%>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
   filter(emp_experience == "Yes")
 
 
 # preliminary data wrangling
-n_projects <- df_practices %>% 
+n_projects <- long %>% 
   filter(project_conducted) %>% 
   filter(type_of_practice == "Questionable") %>% 
   distinct(project, id) %>% 
@@ -21,8 +21,8 @@ n_projects <- df_practices %>%
   summarise(n = n())
 
 project_labels_ger <- c(glue("Anderes \nn = {n_projects[[2,2]]}"), 
-                     glue("Masterarbeit \nn = {n_projects[[5,2]]}"),
-                     glue("Bachelorarbeit \nn = {n_projects[[4,2]]}"), 
+                     glue("MA \nn = {n_projects[[5,2]]}"),
+                     glue("BA \nn = {n_projects[[4,2]]}"), 
                      glue("Projekt \nn = {n_projects[[3,2]]}"), 
                      glue("Expra \nn = {n_projects[[1,2]]}")) %>% rev()
 
@@ -34,7 +34,7 @@ project_labels_en <- c(glue("Other \nn = {n_projects[[2,2]]}"),
 
 project_order <- c("emp.intern", "project", "thesis.bsc", "thesis.msc", "other")
 
-plot_df <- df_practices %>% ungroup() %>% 
+plot_df <- long %>% ungroup() %>% 
   # create factors with appropriate labels for plotting
   mutate(project_ger = factor(project, levels = project_order, labels = project_labels_ger)) %>% 
   mutate(project_en = factor(project, levels = project_order, labels = project_labels_en)) %>% 
@@ -132,5 +132,5 @@ create_plot <- function(data, lang = "ger", colored = F, order_by_zero_share = F
 (n_qrps_per_project_en <- create_plot(plot_df, lang = "en"))
 
 # save plot
-ggsave("plots/german/n_qrps_per_project_ger.png", n_qrps_per_project_ger, width = 210, height = 90, units = "mm")
-ggsave("plots/german/n_qrps_per_project_en.png", n_qrps_per_project_en, width = 210, height = 90, units = "mm")
+ggsave("plots/german/n_qrps_per_project_ger.png", n_qrps_per_project_ger, width = 190, height = 90, units = "mm")
+ggsave("plots/english/n_qrps_per_project_en.png", n_qrps_per_project_en, width = 190, height = 90, units = "mm")

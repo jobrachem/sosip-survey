@@ -7,14 +7,14 @@
 
 # packages and imports
 library(tidyverse)
-main <- read_csv("data/main.csv") %>% 
+wide <- read_csv("data/wide.csv") %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology")
 unis_to_include <- readRDS("data/unis_to_include.rds")
 
 
 # Two warnings are shown. These are no problem
 
-nosi_plot_en <- main %>% 
+nosi_plot_en <- wide %>% 
   # data wrangling for likert plot
   filter(uni_current %in% (unis_to_include %>% pull(uni))) %>% 
   mutate(nosi = factor(nosi, levels = c("No", "Not Sure", "Yes"))) %>% 
@@ -34,7 +34,7 @@ nosi_plot_en <- main %>%
     )
   NULL
 
-nosi_plot_ger <- main %>% 
+nosi_plot_ger <- wide %>% 
   # data wrangling for likert plot
   filter(uni_current %in% (unis_to_include %>% pull(uni))) %>% 
   mutate(nosi = factor(nosi, levels = c("No", "Not Sure", "Yes"),

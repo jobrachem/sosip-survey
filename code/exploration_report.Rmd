@@ -1,0 +1,654 @@
+---
+title: "Exploration Results"
+author: "Johannes Brachem"
+date: "9/2/2019"
+output: 
+  word_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r imports, include=FALSE}
+# functions, packages and static values
+source("code/helpers/packages.R")
+source("code/helpers/helper_functions.R")
+source("code/helpers/static.R")
+
+# data
+wide <- read_csv("data/wide.csv") %>% only_psych()
+long <- read_csv("data/long.csv", col_types = cols(study_stage_open = col_character())) %>% 
+  only_psych()
+
+# results
+ex <- readRDS("data/exploration.rds")
+```
+
+
+```{r global variables, include=FALSE}
+fnt <- "Times"
+lbreak <- ""
+tab.counter <- 0
+```
+
+```{r observation numbers, include=FALSE}
+n.all <- wide %>% nrow()
+n.emp <- wide %>% filter(emp_experience == "Yes") %>% nrow()
+
+n.allproj <- long %>% distinct(id, project, project_conducted) %>%
+  pull(project_conducted) %>% sum()
+
+n.all_clear_uni <- long %>% 
+  filter(project_conducted) %>% 
+  filter(uni_project != "_unclear") %>%
+  distinct(id) %>% nrow()
+
+n.unclearproj <- long %>% 
+  filter(project_conducted) %>% 
+  filter(uni_project == "_unclear") %>% 
+  distinct(id, project) %>% nrow()
+
+n.illog <- long %>% 
+  filter(project_conducted) %>% 
+  filter(is.na(rp_applied)) %>% 
+  group_by(type_of_practice) %>% summarise(n = sum(illog_answ_subj)) %>% 
+  pull(n)
+names(n.illog) <- c("Open", "Questionable")
+
+n.obs.qrp <- long %>% filter(project_conducted) %>% 
+  filter(type_of_practice == "Questionable") %>% nrow()
+
+n.obs.orp <- long %>% filter(project_conducted) %>% 
+  filter(type_of_practice == "Open") %>% nrow()
+
+n_qrp.expra.bsc <- long %>% filter(project_conducted) %>% 
+  filter(project %in% c("thesis.bsc", "emp.intern")) %>% 
+  filter(type_of_practice == "Questionable")
+
+n_orp.expra.bsc <- long %>% filter(project_conducted) %>% 
+  filter(project %in% c("thesis.bsc", "emp.intern")) %>% 
+  filter(type_of_practice == "Open")
+
+nproj.qrp.lin <- long %>% filter(project_conducted) %>% 
+  filter(type_of_practice == "Questionable") %>% 
+  filter(project %in% c("emp.intern", "thesis.bsc", "thesis.msc")) %>% 
+  distinct(id, project) %>% nrow()
+
+nproj.orp.lin <- long %>% filter(project_conducted) %>% 
+  filter(type_of_practice == "Open") %>% 
+  filter(project %in% c("emp.intern", "thesis.bsc", "thesis.msc")) %>% 
+  distinct(id, project) %>% nrow()
+```
+
+# Korrelationstabelle
+Zusammenhänge zwischen Variablen.
+
+```{r Correlations}
+tab.counter <- tab.counter + 1
+tab.cor <- tab.counter
+
+c <- wide %>% #distinct(id, .keep_all = TRUE) %>% 
+  select(age, semester, importance, felt_information, interest, n_projects) %>% 
+  as.matrix() %>% rcorr()
+
+tcor <- format_cor(c, names = n.cor, bonferroni = T)
+
+a0 <- tcor$alpha
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+tcor$table %>% 
+  flextable() %>% 
+  align(j = 2:7, align = "center", part = "header") %>% 
+  align(j = 2:7, align = "left", part = "body") %>% 
+  autofit() %>% 
+  add_footer_lines(p_exp) %>% 
+  footnote(i = 6, j = 1, value = as_paragraph("Anzahl der von der/dem jeweiligen Teilnehmenden begonnenen oder durchgeführten Projekte."), ref_symbols = "a", part = "body") %>% 
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. Korrelationen zwischen numerischen Variablen."))
+```
+
+# GLMM zu QRPs
+
+```{r GLMM QRPs custom}
+m <- ex$qrp$models$m3
+pred.names <- na1
+
+# reference levels of categorical data in table
+kat <- paste(ref.sex, ref.stage, ref.osi_at_uni, ref.osi, ref.rc, ref.practice_taught, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.rk, abk.osi, abk.qrp, abk.sb, abk.sf, sep = ", ")
+
+# table caption
+cap <- "Schätzungen der fixen Effekte für fragwürdige Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM QRPs automatic}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.glmm.qrp <- tab.counter # individual counter for table
+
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Welche Faktoren beeinflussen den Einsatz von QRPs?
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei QRPs n = `r n.illog[2]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Zwischen beiden Kriterien gab es Überschneidungen. Insgesamt werden so `r n.obs.qrp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berücksichtigt.
+
+```{r GLMM QRPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+# GLMM zu ORPs
+
+```{r GLMM ORPs custom}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.glmm.orp <- tab.counter # individual counter for table
+m <- ex$orp$models$m3
+pred.names <- na2
+
+# reference levels of categorical data in table
+kat <- paste(ref.sex, ref.stage, ref.osi_at_uni, ref.osi, ref.rc, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.rk, abk.osi, abk.qrp, abk.sb, abk.sf, sep = ", ")
+
+# table caption
+cap <- "Schätzungen der fixen Effekte für positive Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM ORPs automatic}
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Welche Faktoren beeinflussen den Einsatz von ORPs?
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei offenen Praktiken n = `r n.illog[1]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Zwischen beiden Kriterien gab es Überschneidungen. Insgesamt werden so `r n.obs.orp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berichtet.
+
+```{r GLMM ORPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+# GLMM zu rezenten Projekten, QRPs
+
+
+```{r GLMM recent QRPs custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.recent.qrp <- tab.counter # individual counter for table
+m <- ex$recent.qrp$models$m2
+pred.names <- na3
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.stage, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, sep = ", ")
+
+# table caption
+cap <- "Schätzungen der fixen Effekte für fragwürdige Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM recent QRPs automatic}
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Gibt es zwischen aktuellen Master- und aktuellen Bachelor-Studierenden Unterschiede in der Wahrscheinlichkeit, mit der QRPs angewendet wurden? Wenn ja, ist das ein Hinweis darauf, dass es in der näheren Vergangenheit Veränderungen in der Lehre gab.
+Hier nur Betrachtung von Expras und Bachelorarbeiten.
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei offenen Praktiken n = `r n.illog[1]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Des Weiterern wurden nur Daten von Expras und Bachelorarbeiten berücksichtigt (n = `r n_qrp.expra.bsc %>% distinct(id, project) %>% nrow()` Projekte). Insgesamt werden so `r n.obs.qrp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berichtet. Zwischen den Kriterien gab es Überschneidungen.
+
+```{r GLMM recent QRPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+
+# GLMM zu rezenten Projekten, ORPs
+
+
+```{r GLMM recent ORPs custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.recent.orp <- tab.counter # individual counter for table
+m <- ex$recent.orp$models$m2
+pred.names <- na3
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.stage, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, sep = ", ")
+
+# table caption
+cap <- "Schätzungen der fixen Effekte für offene Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM recent ORPs automatic}
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Gibt es zwischen aktuellen Master- und aktuellen Bachelor-Studierenden Unterschiede in der Wahrscheinlichkeit, mit der positive Forschungspraktiken angewendet wurden? Wenn ja, ist das ein Hinweis darauf, dass es Veränderungen in der Lehre gab.
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei offenen Praktiken n = `r n.illog[1]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Des Weiterern wurden nur Daten von Expras und Bachelorarbeiten berücksichtigt (n = `r n_orp.expra.bsc %>% distinct(id, project) %>% nrow()` Projekte). Insgesamt werden so `r n.obs.orp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berichtet. Zwischen den Kriterien gab es Überschneidungen.
+
+```{r GLMM recent ORPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+
+# GLMM linearer Trend der Projektart, QRPs
+
+
+```{r GLMM linear QRPs custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.lin.qrp <- tab.counter # individual counter for table
+m <- ex$lin.qrp$models$m3
+pred.names <- na4a
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.stage, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, sep = ", ")
+
+# table caption
+cap <- "Modell zur Untersuchung des linearen Trends der Projektart. Schätzungen der fixen Effekte für fragwürdige Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM linear QRPs automatic}
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Gibt es einen Trend dahingehend, dass bei Projekten, die später im Studium durchgeführt werden, weniger oder mehr QRPs eingesetzt werden?
+Hier nur Betrachtung von Expras, Bachelorarbeiten und Masterarbeiten, da für diese die Reihenfolge klar bestimmt werden kann.
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei offenen Praktiken n = `r n.illog[1]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Des Weiterern wurden nur Daten von Expras, Bachelorarbeiten und Masterarbeiten berücksichtigt (n = `r nproj.qrp.lin` Projekte). Insgesamt werden so `r n.obs.qrp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berichtet. Zwischen den Kriterien gab es Überschneidungen.
+
+```{r GLMM linear QRPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+# GLMM linearer Trend der Projektart, ORPs
+
+
+```{r GLMM linear ORPs custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.lin.orp <- tab.counter # individual counter for table
+m <- ex$lin.orp$models$m3
+pred.names <- na4b
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.stage, ref.proj, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, sep = ", ")
+
+# table caption
+cap <- "Modell zur Untersuchung des linearen Trends der Projektart. Schätzungen der fixen Effekte für prositive Forschungspraktiken. Abhängige Variable: Forschungspraktik angewendet (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM linear ORPs automatic}
+d <- m %>% model.frame() %>% as_tibble() # 'raw' data for this table
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.obsx <- d %>% nrow(); n.obs <- n.obsx %>% format(big.mark = ' ')
+n.projx <- d %>% distinct(id, project) %>% nrow()
+n.proj <- n.projx %>% format(big.mark = ' ')
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("Datenpunkte insg. = {n.obs}, Projekte = {n.proj}, Teilnehmende = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Gibt es einen Trend dahingehend, dass bei Projekten, die später im Studium durchgeführt werden, weniger oder mehr ORPs eingesetzt werden?
+Hier nur Betrachtung von Expras, Bachelorarbeiten und Masterarbeiten, da für diese die Reihenfolge klar bestimmt werden kann.
+
+## Ausschluss von Beobachtungen
+Einzelne Beobachtungen wurden wegen inkonsistenter Antworten oder unklarer Zuordnung des jeweiligen Projektes zu einer Universität ausgeschlossen. Ersteres geschah in Fällen, in denen Teilnehmende bei der Frage nach der Anwendung einer spezifischen Forschungspraktik sowohl die Antwortmöglichkeit "Keines" (Praktik in keinem Projekt verwendet), als auch ein oder mehrere Projekte auswählen (bei offenen Praktiken n = `r n.illog[1]` Beobachtungen). Zweiteres geschah bei den Projekten "Projektarbeit" und "Anderes", wenn die Teilnehmenden ihre Universität zwischen Bachelor und Master gewechselt hatten, oder bei Alumni/Alumnae, da deren Bachelor-Universität nicht erfasst wurde (n = `r n.unclearproj`). Des Weiterern wurden nur Daten von Expras, Bachelorarbeiten und Masterarbeiten berücksichtigt (n = `r nproj.orp.lin` Projekte). Insgesamt werden so `r n.obs.orp - n.obsx` Datenpunkte zu `r n.allproj - n.projx` Projekten von `r n.emp - n.subjx` Teilnehmenden in der Analyse nicht berichtet. Zwischen den Kriterien gab es Überschneidungen.
+
+```{r GLMM linear ORPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+
+# GLMM Behandlung der RK in der Lehre
+
+```{r GLMM rc in teaching custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.rc_teaching <- tab.counter # individual counter for table
+m <- ex$specific$models$m2
+pred.names <- na5
+d <- ex$data$specific
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.sex, ref.stage, ref.osi_at_uni, ref.osi, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, abk.osi, sep = ", ")
+
+# table caption
+cap <- "Modell zur Untersuchung von Zusammenhängen der Kovariaten mit dem Bericht über eine Behandlung der Replikationskrise in Lehrveranstaltungen. Schätzungen der fixen Effekte. Abhängige Variable:  (0 – Nein, 1 – Ja)."
+```
+
+```{r GLMM rc in teaching ORPs automatic}
+t <- m %>% glmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("N = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Welche Faktoren hängen mit der Behandlung der RK in der Lehre zusammen? Ist es gar so, dass Open Science Initiativen dafür sorgen, dass die Behandlung in der Lehre wahrscheinlicher wird?
+
+```{r GLMM rc in teaching ORPs Table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  autofit() %>% 
+  add_footer_lines(c(glue("Anmerkungen. {n}"), ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  identity()
+```
+
+# LMER Eindruck von Informiertheit
+
+```{r LMER feeling informed custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.inf <- tab.counter # individual counter for table
+m <- ex$inf$models$m2
+pred.names <- na6
+d <- ex$data$att
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.sex, ref.stage, ref.osi_at_uni, ref.osi, ref.rc, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, abk.osi, abk.rk, sep = ", ")
+
+# table caption
+cap <- "Modell zur Untersuchung von Zusammenhängen der Kovariaten mit dem Eindruck der Teilnehmenden, wie gut sie über den Themenkomplex 'Replikationskrise und Open Science' informiert sind. Schätzungen der fixen Effekte. Abhängige Variable:  Eindruck von Informiertheit (numerisch, min: 1 (gar nicht), max: 5 (sehr), z-standardisiert)."
+```
+
+```{r LMER feeling informed automatic}
+t <- m %>% lmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("N = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Welche Faktoren hängen damit zusammen, ob Studierende sich über den Themenkomplex gut informiert fühlen?
+
+```{r LMER feeling informed table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(2:4, co) %>% 
+  flextable() %>% 
+  align(j = c(1, 5), align = "left", part = "body") %>% 
+  align(j = c(1, 5), align= "left", part = "header") %>% 
+  # autofit() %>% 
+  add_footer_lines(c(n, ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,5), width = 1) %>%
+  # width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  identity()
+```
+
+
+# LMER Wichtigkeit
+
+```{r LMER importance custom, include=FALSE}
+tab.counter <- tab.counter + 1 # counter increases automatically
+tab.imp <- tab.counter # individual counter for table
+m <- ex$imp$models$m2
+pred.names <- na6
+d <- ex$data$att
+m %>% summary()
+
+# reference levels of categorical data in table
+kat <- paste(ref.sex, ref.stage, ref.osi_at_uni, ref.osi, ref.rc, sep = ", ")
+
+# abbreviations used in table
+abk.tab <-  paste(abk.sf, abk.osi, abk.rk, sep = ", ")
+
+# table caption
+cap <- "Modell zur Untersuchung von Zusammenhängen der Kovariaten mit der Angabe der Teilnehmenden, als wie wichtig sie den Themenkomplex 'Replikationskrise und Open Science' einschätzen. Schätzungen der fixen Effekte. Abhängige Variable:  Eindruck von Informiertheit (numerisch, min: 1 (gar nicht), max: 5 (sehr), z-standardisiert)."
+```
+
+```{r LMER importance automatic}
+t <- m %>% lmer_table(names = pred.names) # table data
+
+a0 <- t$alpha # used alpha level
+a <-  a0 %>% quick.p()
+b <- ifelse(a0[1] == 0.05, "", " (adjustierte Alpha-Niveaus nach Bonferroni)")
+p_exp <- glue("Markierungen: * p < {a[1]}, ** p < {a[2]}, *** p < {a[3]}{b}")
+
+n.subjx <- d %>% distinct(id) %>% nrow()
+n.subj <- n.subjx  %>% format(big.mark = ' ')
+n <- glue("N = {n.subj}")
+
+ref <- paste0("Referenzkategorien: ", kat, ".\n")
+abk <- abk.f(abk.glmer, abk.tab)
+```
+
+Welche Faktoren hängen damit zusammen, ob Studierende den Themenkomplex wichtig finden?
+
+```{r LMER importance table}
+t$table %>% 
+  select(-1) %>% 
+  mutate_at(2:4, co) %>% 
+  flextable() %>% 
+  align(j = c(1, 5), align = "left", part = "body") %>% 
+  align(j = c(1, 5), align= "left", part = "header") %>% 
+  # autofit() %>% 
+  add_footer_lines(c(n, ref, abk, p_exp)) %>% 
+  set_caption(glue("Tabelle {tab.counter}. {cap}")) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,5), width = 1) %>%
+  # width(5, width = 1) %>%
+  font(fontname = fnt, part = "all") %>% 
+  identity()
+```

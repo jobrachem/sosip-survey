@@ -14,7 +14,7 @@
 # packages and imports
 library(tidyverse)
 
-main <- read_csv("data/main.csv") %>% 
+wide <- read_csv("data/wide.csv") %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology")
 
 
@@ -23,7 +23,7 @@ likert_labs_ger <- c("gar nicht", "2", "3", "4", "sehr")
 likert_labs_en <- c("not at all", "2", "3", "4", "very much")
 
 attitudes_plot <- function(likert_labs) {
-  attitudes_plot <- main %>% 
+  attitudes_plot <- wide %>% 
     select(interest, importance, felt_information) %>% 
     mutate(interest = factor(interest, levels = 1:5, labels = likert_labs)) %>%
     mutate(importance = factor(importance, levels = 1:5, labels = likert_labs)) %>% 

@@ -7,11 +7,11 @@
 # packages and imports
 library(tidyverse)
 stats <- readRDS("data/stats_software.rds")
-main <- read_csv("data/main.csv") %>% 
+wide <- read_csv("data/wide.csv") %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology")
 
 
-n_participants <- nrow(main_all)
+n_participants <- nrow(wide_all)
 
 # plot
 stats_plot <- stats %>% 

@@ -1,0 +1,77 @@
+---
+title: "flextable_test2"
+author: "Johannes Brachem"
+date: "9/1/2019"
+output:
+  word_document:
+    reference_docx: flextable_test2a.docx
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r imports}
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+source("code/packages.R")
+source("code/helper_functions.R")
+source("code/static.R")
+
+d <- read_csv("data/df_practices.csv", col_types = cols(study_stage_open = col_character()))
+ex <- readRDS("data/exploration.rds")
+t1 <- ex$qrp$models$m3 %>% glmer_table(names = na1)
+
+
+n1 <- glue::glue("Anmerkungen. N = {ex$data$qrp %>% nrow() %>% format(big.mark = ' ')}")
+ref1 <- "Referenzkategorien: Weiblich (Geschlecht), Bachelor (Studienfortschritt), Nein (OSI an der Uni), Nein (OSI bekannt), Ja (RK gelehrt), Nein (Praktik gelehrt), Fehlende Stichprobenplanung (QRP), Expra (Projekt)\n"
+
+abk <- "Abkürzungen: OSI – Open Science Initiative, RK – Replikationskrise, QRP – Questionable Research practice [Fragwürdige Forschungspraktik], SB – Selektives Berichten, B – Beta-Gewicht, SE – Standard Error [Standardfehler], OR – Odds Ratio [Chancenverhältnis], KI - Konfidenzintervall\n"
+lbreak <- ""
+p_exp <- glue::glue("Markierungen: * p < {t1$alpha[1] %>% format(digits = 1, nsmall = 3)}, ** p < {t1$alpha[2] %>% format(digits = 1, nsmall = 3, scientific = FALSE)}, *** p < {t1$alpha[3] %>% format(digits = 1, nsmall = 3, scientific = FALSE)} (adjustierte Alpha-Niveaus nach Bonferroni)")
+# 
+# print(ft)
+
+
+t1$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  add_footer_lines(c(n1, ref1, abk, p_exp)) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = "Times", part = "all") %>% 
+  identity()
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+t2 <- ex$orp$models$m3 %>% glmer_table(names = na2)
+n2 <- glue::glue("Anmerkungen. N = {ex$data$orp %>% nrow() %>% format(big.mark = ' ')}")
+ref2 <- "Referenzkategorien: Weiblich (Geschlecht), Bachelor (Studienfortschritt), Nein (OSI an der Uni), Nein (OSI bekannt), Ja (RK gelehrt), Fehlende Stichprobenplanung (QRP), Expra (Projekt)\n"
+abk <- "Abkürzungen: OSI – Open Science Initiative, RK – Replikationskrise, QRP – Questionable Research practice [Fragwürdige Forschungspraktik], SB – Selektives Berichten, B – Beta-Gewicht, SE – Standard Error [Standardfehler], OR – Odds Ratio [Chancenverhältnis], KI - Konfidenzintervall\n"
+lbreak <- ""
+p_exp <- glue::glue("Markierungen: * p < {t2$alpha[1] %>% format(digits = 1, nsmall = 3)}, ** p < {t2$alpha[2] %>% format(digits = 1, nsmall = 3, scientific = FALSE)}, *** p < {t2$alpha[3] %>% format(digits = 1, nsmall = 3, scientific = FALSE)} (adjustierte Alpha-Niveaus nach Bonferroni)")
+
+t2$table %>% 
+  select(-1) %>% 
+  mutate_at(c(2, 3, 4, 6), co) %>% 
+  flextable() %>% 
+  align(j = c(1, 7), align = "left", part = "body") %>% 
+  align(j = c(1, 7), align= "left", part = "header") %>% 
+  add_footer_lines(c(n2, ref2, abk, p_exp)) %>% 
+  width(1, width = 2) %>%
+  width(c(2,3,4,6, 7), width = 0.75) %>%
+  width(5, width = 1) %>%
+  font(fontname = "Times", part = "all") %>% 
+  identity()
+```
+
+

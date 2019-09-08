@@ -6,28 +6,29 @@
 # packages
 library(tidyverse)
 library(ggpubr)
+# function import 
+source("code/helpers/helper_functions.R")
 
 # data import
-main <- read_csv("data/main.csv")
+wide <- read_csv("data/wide.csv")
 
-main_descriptives_full<- main %>% 
+wide_descriptives_full<- wide %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
   select(age, sex, semester, study_stage_mc, study_stage_open, 
          uni_bachelor, uni_current, study_degree, study_degree_field, 
          study_degree_year, study_degree_yesno, comments, exp_specific)
 
-main_descriptives <- main %>% 
+wide_descriptives <- wide %>% 
   filter(field_of_study_mc == "Psychology" | study_degree_field == "Psychology") %>% 
   filter(emp_experience == "Yes") %>% 
   select(age, sex, semester, study_stage_mc, study_stage_open, 
          uni_bachelor, uni_current, study_degree, study_degree_field, 
          study_degree_year, study_degree_yesno, comments, exp_specific)
 
-# function import (german comma printing)
-source("code/co.R")
+
 
 # progress of all students
-sems_plot_full <- main_descriptives_full %>% 
+sems_plot_full <- wide_descriptives_full %>% 
   # light wrangling
   filter(study_stage_mc != "Other") %>% 
   filter(semester < 11) %>% 
@@ -59,7 +60,7 @@ sems_plot_full_en.out
 
 
 # progress of students with empirical experience
-sems_plot <- main_descriptives %>% 
+sems_plot <- wide_descriptives %>% 
   # light wrangling
   filter(study_stage_mc != "Other") %>% 
   filter(semester < 11) %>% 
