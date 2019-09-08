@@ -547,7 +547,7 @@ Weitere explorative Analysen führten wir zur Behandlung der Replikationskrise i
 
 # Abbildungen
 
-```{r nsems, echo=FALSE, fig.cap="Aufschlüsselung der Teilnehmenden nach Studienfortschritt. (a) Volle Stichprobe. (b) EE-Teilstichprobe.", fig.width=5cm}
+```{r nsems, echo=FALSE, fig.cap="Aufschlüsselung der Teilnehmenden nach Studienfortschritt. (a) Volle Stichprobe. (b) EE-Teilstichprobe."}
 knitr::include_graphics('../plots/german/participants_semester_both_ger.png')
 ```
 

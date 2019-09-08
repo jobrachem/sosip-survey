@@ -1524,7 +1524,7 @@ div.tocify {
 <h1 class="title toc-ignore">Descriptives</h1>
 <h3 class="subtitle">PsyFaKo Open Science Survey</h3>
 <h4 class="author">Johannes Brachem</h4>
-<h4 class="date">Last update: 02 September, 2019</h4>
+<h4 class="date">Last update: 08 September, 2019</h4>
 
 </div>
 
@@ -1537,6 +1537,11 @@ div.tocify {
 <pre><code>## Parsed with column specification:
 ## cols(
 ##   .default = col_character(),
+##   created = col_datetime(format = &quot;&quot;),
+##   modified = col_datetime(format = &quot;&quot;),
+##   ended = col_datetime(format = &quot;&quot;),
+##   expired = col_logical(),
+##   check = col_double(),
 ##   study_degree_yesno = col_double(),
 ##   study_degree_year = col_double(),
 ##   semester = col_double(),
@@ -1546,8 +1551,13 @@ div.tocify {
 ##   felt_information = col_double(),
 ##   data_ok = col_double(),
 ##   id = col_double(),
+##   illog_answ_subj = col_logical(),
 ##   n_projects = col_double(),
-##   n_emp.intern = col_double()
+##   n_emp.intern = col_double(),
+##   n_project = col_double(),
+##   n_thesis.bsc = col_double(),
+##   n_thesis.msc = col_double()
+##   # ... with 1 more columns
 ## )</code></pre>
 <pre><code>## See spec(...) for full column specifications.</code></pre>
 <pre class="r"><code>n_obs_uni &lt;- read_csv(&quot;data/n_observations_uni.csv&quot;)</code></pre>
@@ -1576,7 +1586,7 @@ wide_descriptives_full %&gt;% skim()</code></pre>
 ##  n obs: 1413 
 ##  n variables: 13 
 ## 
-## ── Variable type:character ───────────────────────────────────────────────────────────────────
+## ── Variable type:character ─────────────────────────────────────────────────────────────
 ##            variable missing complete    n min  max empty n_unique
 ##            comments    1253      160 1413   3 2052     0      154
 ##        exp_specific     251     1162 1413   1   13     0       24
@@ -1588,7 +1598,7 @@ wide_descriptives_full %&gt;% skim()</code></pre>
 ##        uni_bachelor    1049      364 1413  11   46     0       23
 ##         uni_current       0     1413 1413   1   46     0       49
 ## 
-## ── Variable type:numeric ─────────────────────────────────────────────────────────────────────
+## ── Variable type:numeric ───────────────────────────────────────────────────────────────
 ##            variable missing complete    n  mean   sd p0 p25 p50   p75 p100
 ##                 age       0     1413 1413 23    3.98 17  21  22 24      53
 ##            semester      58     1355 1413  3.28 2.05  1   1   3  5      17
@@ -1670,7 +1680,7 @@ wide_descriptives_filtered %&gt;% skim()</code></pre>
 ##  n obs: 1162 
 ##  n variables: 13 
 ## 
-## ── Variable type:character ───────────────────────────────────────────────────────────────────
+## ── Variable type:character ─────────────────────────────────────────────────────────────
 ##            variable missing complete    n min  max empty n_unique
 ##            comments    1019      143 1162   3 1409     0      138
 ##        exp_specific       0     1162 1162   1   13     0       24
@@ -1682,7 +1692,7 @@ wide_descriptives_filtered %&gt;% skim()</code></pre>
 ##        uni_bachelor     799      363 1162  11   46     0       23
 ##         uni_current       0     1162 1162   1   46     0       49
 ## 
-## ── Variable type:numeric ─────────────────────────────────────────────────────────────────────
+## ── Variable type:numeric ───────────────────────────────────────────────────────────────
 ##            variable missing complete    n  mean   sd p0 p25 p50   p75 p100
 ##                 age       0     1162 1162 23.34 3.62 18  21  22 25      52
 ##            semester      58     1104 1162  3.68 2.03  1   3   3  5      17
