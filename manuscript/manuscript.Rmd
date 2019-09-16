@@ -45,7 +45,7 @@ fnt <- "Arial"
 lbreak <- ""
 tab.counter <- 0
 rounding_number <- 1 # for percentages
-online.suppl <- "placeholder"
+online.suppl <- "https://osf.io/br2zf/"
 link <- glue("[{online.suppl}]({online.suppl})")
 tables <- list()
 ```
