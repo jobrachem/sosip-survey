@@ -1,12 +1,12 @@
 ---
-title: "Fragwürdige Forschungspraktiken in empirischen Projekten im Rahmen des Psychologie-Studiums"
+title: "Replikationskrise, Open Science und p-hacking: Die Studierenden"
 subtitle: "Ergänzende Materialien"
 author: "PsyFaKo Open Science AG"
 date: "`r format(Sys.time(), '%d.%m.%Y')`"
 output:
   bookdown::word_document2: 
     fig_caption: yes
-    reference_docx: manuscript-style-reference.docx
+    reference_docx: supplements-style-reference.docx
     toc: yes
   pdf_document: 
     fig_caption: yes
@@ -98,7 +98,7 @@ nproj.orp.lin <- long %>% filter(project_conducted) %>%
 ```
 
 
-## Ergänzungen zum Methodenteil
+# Ergänzungen zum Methodenteil
 
 ```{r}
 gender <- wide %>% only_psych() %>% 
