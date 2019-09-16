@@ -18,7 +18,7 @@ basic_exclusions <- function(d) {
   n2 <- nrow(d2)
   n3 <- nrow(d3)
   n4 <- nrow(d4)
-  return(list(data = d3, exclusions = list(raw = n0, in_period = n1, 
+  return(list(data = d4, exclusions = list(raw = n0, in_period = n1, 
                                            fin = n2, ok = n3, students = n4)))
 }
 

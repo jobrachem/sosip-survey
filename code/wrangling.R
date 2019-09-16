@@ -5,14 +5,10 @@
 
 #### 1.2 Data import from disk ####
 d <- read_csv("data/start.csv")
+excl <- readRDS("data/exclusions.Rds")
 
 #### 2 Exclusion of participants ####
-# apply basic exclusion criteria
-excl <- d %>% basic_exclusions()
-
-d <- excl$data %>% german_unis()
-
-excl$exclusions$ger <- nrow(d)
+# basic exclusions were done in prepare_data.R
 
 # --- participants with surprising age --- #
 # deal with participants who are surprisingly young
@@ -26,9 +22,11 @@ excl$exclusions$ger <- nrow(d)
 # however. We keep those in the data.
 d %>% pull(age) %>% table()
 d %>% filter(age < 18) %>% select(study_stage_mc, semester, age)
-d <- d %>% filter(age >16) 
+d_age_filtered <- d %>% filter(age >16) 
+excl$age <- nrow(d_age_filtered)
 
-d <- d %>%  mutate(id = 1:nrow(.))
+d <- d_age_filtered %>%  mutate(id = 1:nrow(.))
+
 
 #### 2.1 Exclusion of items ####
 # --- illogical responses --- #
@@ -86,6 +84,19 @@ d <- d %>% mutate(
 #### 4 Add variables ####
 d <- d %>% add_n_projects()
 
+d_psych_filtered <- d %>% only_psych()
+d_emp_filtered <- d_psych_filtered %>% filter(emp_experience == "Yes")
+
+excl$psych <- nrow(d_psych_filtered)
+excl$emp <- nrow(d_emp_filtered)
+
+# save exclusion numbers
+sink(file = "data/exclusions.txt")
+cat("Subject numbers. Starting with raw numbers.\n")
+cat("Then, each numberr gives the subject numbers after the exclusion was done.\n\n")
+excl
+sink(file = NULL)
+saveRDS(excl, "data/exclusions.rds")
 
 #### 5 Create long data frame ####
 # add indicators: has practice i been applied to project k?
@@ -135,4 +146,3 @@ d.l <- d.l %>%
 #### 7 Save results ####
 write_csv(d, "data/wide.csv")
 write_csv(d.l, "data/long.csv")
-

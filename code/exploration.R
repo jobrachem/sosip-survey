@@ -23,7 +23,7 @@ d_filtered <- data %>%
   only_psych() %>% filter(emp_experience == "Yes") %>% 
   filter(project_conducted) 
 
-d <- d_wrangled
+d <- d_filtered
 
 #### Descriptives for exploration ####
 
@@ -316,4 +316,4 @@ results <- list(qrp = qrp, orp = orp, recent.qrp = recent.qrp,
                 recent.orp = recent.orp, specific = specific, 
                 inf = inf, imp = imp, lin.qrp = lin.qrp, lin.orp = lin.orp, data = data_list)
 
-saveRDS(results, "data/analysis/exploration.rds")
+saveRDS(results, "data/exploration.rds")

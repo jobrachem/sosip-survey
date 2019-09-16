@@ -1,0 +1,30 @@
+Subject numbers. Starting with raw numbers.
+Then, each numberr gives the subject numbers after the exclusion was done.
+
+$raw
+[1] 3745
+
+$in_period
+[1] 3558
+
+$fin
+[1] 1503
+
+$ok
+[1] 1495
+
+$students
+[1] 1476
+
+$ger
+[1] 1475
+
+$age
+[1] 1466
+
+$psych
+[1] 1397
+
+$emp
+[1] 1146
+

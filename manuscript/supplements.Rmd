@@ -97,6 +97,42 @@ nproj.orp.lin <- long %>% filter(project_conducted) %>%
   distinct(id, project) %>% nrow()
 ```
 
+
+## Ergänzungen zum Methodenteil
+
+```{r}
+gender <- wide %>% only_psych() %>% 
+  filter(emp_experience == "Yes") %>% 
+  group_by(sex) %>% summarise(share = (n() / nrow(.))*100) %>% 
+  spread(key = sex, value = share) %>% 
+  rename(noanswer = `no answer`)
+
+age <- wide %>% only_psych() %>% 
+  filter(emp_experience == "Yes") %>% 
+  pull(age)
+
+phase <- wide %>% only_psych() %>% 
+  filter(emp_experience == "Yes") %>% 
+  group_by(study_stage_mc) %>% summarise(share = (n() / nrow(.))*100) %>% 
+  spread(key = study_stage_mc, value = share) %>% 
+  rename(alumni = `I don't study (any more)`)
+
+uni.ma <- wide %>% only_psych() %>% 
+  filter(emp_experience == "Yes") %>% 
+  pull(uni_current) %>% unique()
+uni.bsc <- wide %>% only_psych() %>% 
+  filter(emp_experience == "Yes") %>% 
+  pull(uni_bachelor) %>% unique()
+
+n.uni <- c(uni.ma, uni.bsc) %>% unique() %>% na.omit()
+
+n.uni30 <- sum(!(n.uni %in% as.character(1:50)))
+
+```
+
+
+**Stichprobenbeschreibung (volle Stichprobe)**. Die Teilnehmer\*innen in dieser Teilstichprobe (weiblich: `r gender$female %>% cop()`; männlich: `r gender$male %>% cop()`; divers: `r gender$diverse %>% cop()`; keine Angabe: `r gender$noanswer %>% cop()`) waren im Mittel `r age %>% mean() %>% co()` Jahre alt (SD = `r age %>% sd() %>% co()`) und Psychologiestudierende in allen Phasen ihres Studiums (s. Abbildung 1). Es nahmen mehr Bachelor- als Masterstudierende teil (`r phase$Bachelor %>% cop()` zu `r phase$Master %>% cop()`). Der Anteil von Alumni/Alumnae war mit `r phase$alumni %>% cop()` gering. In der Stichprobe sind Teilnehmende von `r n.uni %>% length()` deutschsprachigen staatlichen und privaten Hochschulen und Universitäten vertreten. Für `r n.uni30` Hochschulen lagen uns 30 oder mehr Datenpunkte vor.
+
 # Ausführlichere Darstellung der Ergebnisse
 
 ## Verbreitung fragwürdiger Forschungspraktiken
