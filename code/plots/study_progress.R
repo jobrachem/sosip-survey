@@ -81,7 +81,7 @@ sems_plot <- wide_descriptives %>%
 
 # Anzahl Teilnehmende nach Fachsemester und Studienabschnitt
 sems_plot_ger.out <- sems_plot + 
-  labs(x = "Semester", y = "Anzahl", title = "EF-Teilstichprobe")
+  labs(x = "Semester", y = "Anzahl", title = "EE-Teilstichprobe")
 
 # Number of participants, split by semester and study stage
 sems_plot_en.out <- sems_plot + 
@@ -93,7 +93,7 @@ sems_plot_en.out
 
 # combining both semester plots
 (sems_plot_both.ger <- ggarrange(sems_plot_full_ger.out, sems_plot_ger.out,
-                                ncol = 1, nrow = 2, labels = "auto"))
+                                ncol = 2, nrow = 1, labels = "auto"))
 
 (sems_plot_both.en <- ggarrange(sems_plot_full_en.out, sems_plot_en.out,
                                  ncol = 1, nrow = 2, labels = "auto"))
@@ -102,7 +102,7 @@ sems_plot_en.out
 
 # Both semesters together
 ggsave("plots/german/participants_semester_both_ger.png", sems_plot_both.ger,
-       width = 100, height = 100, units = "mm")
+       width = 200, height = 50, units = "mm")
 
 ggsave("plots/english/participants_semester_both_en.png", sems_plot_both.en,
        width = 100, height = 100, units = "mm")
