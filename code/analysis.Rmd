@@ -87,6 +87,26 @@ q01 <- long %>%
             maximum = max(practices_per_project))
 
 q01
+
+# changed, 05.03.2020: Because we can not be sure, if the answers to "project" and "other refer to single projects or mutiple projects, we calculate a second number which excludes these projects from the calculation.
+
+q01.reduced <- long %>% 
+  filter(project %in% c('emp.intern', 'thesis.bsc', 'thesis.msc')) %>% 
+  # number of applied practices (per individual and type of project)
+  group_by(id, type_of_practice, n_projects) %>% 
+  summarise(applied_practices = sum(rp_applied, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(practices_per_project = applied_practices / n_projects) %>% 
+  
+  # average over individuals
+  group_by(type_of_practice) %>% 
+  summarise(m = mean(practices_per_project),
+            sd = sd(practices_per_project),
+            med = median(practices_per_project),
+            minimum = min(practices_per_project),
+            maximum = max(practices_per_project))
+
+q01.reduced
 ```
 
 ### Project Aggregation
@@ -220,6 +240,32 @@ q05 <- long %>%
 q05
 ```
 
+### Comparison: Share of one-time application vs. share of projects with practices
+Added (28.04.2020)
+
+It obviously makes a difference, whether you ask "did you apply this practice at least once in any project?" or "did you apply this practice in this specific project?". Here, we calculate the difference.
+
+```{r}
+share_comparison <- q05 %>% 
+  ungroup() %>% 
+  rename(share_projects = share) %>% 
+  arrange(practice) %>% 
+  mutate(share_once = q03 %>% arrange(practice) %>% pull(share)) %>% 
+  arrange(desc(share_projects)) %>% 
+  # filter(type_of_practice == "Questionable") %>% 
+  mutate(diff = share_once - share_projects)
+  
+share_comparison_agg <- share_comparison %>% 
+  group_by(type_of_practice) %>% 
+  summarise(mean_diff = mean(diff),
+            mean_project = mean(share_projects),
+            mean_once = mean(share_once))
+
+share_comparison
+share_comparison_agg
+```
+
+
 ### Open Science Initiatives
 
 ```{r}
@@ -240,10 +286,13 @@ nosi_q %>%
 # Save Results
 ```{r}
 block2 <- list(q01 = q01, 
+               q01.reduced = q01.reduced,
                     q02 = q02, 
                     q03 = q03, 
                     q04 = q04, 
                     q05 = q05,
+               share_comparison = share_comparison,
+               share_comparison_agg = share_comparison_agg,
                prereg_data = prereg_where_data)
 
 saveRDS(block2, "data/block2_results.rds")
@@ -253,6 +302,8 @@ saveRDS(block2, "data/block2_results.rds")
 ```{r}
 # global
 n_participants <- nrow(wide_all)
+n_bsc <- wide_all %>% filter(study_stage_mc == "Bachelor") %>% nrow()
+n_msc <- wide_all %>% filter(study_stage_mc == "Master") %>% nrow()
 ```
 
 ## Specific QRPs in teaching
@@ -374,9 +425,22 @@ q_rc_t.spec <- wide_all %>%
                                  "15" = "Other")) %>% 
   select(-answer_number, -lecture_id)
 
+dgps_mandatory_lectures = c("General Psychology", "Introductory Class", "Methods, Stats, Expra", "General Psychology", "Social Psychology", "Developmental Psychology", "Differential Psychology", "Biological- / Neuropsychology", "Diagnostics")
+
 q_rc_t.spec.share <- q_rc_t.spec %>% 
   group_by(lecture) %>% summarise(n = n()) %>% ungroup() %>% 
-  mutate(share = n / n_participants * 100) %>% arrange(share %>% desc())
+  mutate(share = n / n_msc * 100) %>% arrange(share %>% desc())
+
+q_rc_t.spec.share.msc <- q_rc_t.spec %>% 
+  filter(study_stage_mc == "Master") %>% 
+  filter(lecture %in% dgps_mandatory_lectures) %>% 
+  group_by(lecture) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_msc * 100) %>% arrange(share %>% desc())
+
+q_rc_t.spec.share.bsc <- q_rc_t.spec %>% 
+  filter(study_stage_mc == "Bachelor") %>% 
+  group_by(lecture) %>% summarise(n = n()) %>% ungroup() %>% 
+  mutate(share = n / n_bsc * 100) %>% arrange(share %>% desc())
 ```
 
 ## Attitudes towards replication crisis and open science
@@ -440,6 +504,8 @@ block3 <- list(qrps_teaching = q_qrp_t.spec,
                rc_teaching_unis = rc_teaching_unis.out,
                rc_teaching_specific = q_rc_t.spec,
                rc_teaching_specific_share = q_rc_t.spec.share,
+               rc_teaching_specific_share_bsc = q_rc_t.spec.share.bsc,
+               rc_teaching_specific_share_msc = q_rc_t.spec.share.msc,
                nosi_data = nosi_agg2,
                nosi_events = nosi_events
                )
