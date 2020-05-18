@@ -77,6 +77,7 @@ fix_typos <- function(d) {
   
   # The code below replaces answers like `----` in `uni_current` with `NA`.
   d1$uni_current[grepl(".*--.*", d1$uni_current)] <- NA
+  d1$uni_bachelor[grepl(".*--.*", d1$uni_bachelor)] <- NA
   
   return(d1)
 }
@@ -214,9 +215,9 @@ format_p <- function(p, zero = FALSE, stars = "yes", alpha = NULL) {
 
 printp <- function(p, zero = FALSE, stars = "no", alpha = NULL) {
   if (p < 0.001) {
-    out <- paste("p", format_p(p, zero = zero, stars = stars, alpha = alpha))
+    out <- paste("*p*", format_p(p, zero = zero, stars = stars, alpha = alpha))
   } else {
-    out <- paste("p =", format_p(p, zero = zero, stars = stars, alpha = alpha))
+    out <- paste("*p* =", format_p(p, zero = zero, stars = stars, alpha = alpha))
   }
   return(out)
 }
