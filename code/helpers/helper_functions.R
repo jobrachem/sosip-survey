@@ -6,7 +6,11 @@ basic_exclusions <- function(d) {
     filter(created >= as.Date("2018-11-22")) %>%  # filter out data from testing phase
     filter(created <= as.Date("2019-02-28"))      # filter out data from outside sampling period
   
-  d2 <- d1 %>% filter(!is.na(session), !is.na(ended)) 
+  # filter out all people that never left starting page
+  d1a <- d1 %>% 
+    filter(!is.na(session), !is.na(modified))
+  
+  d2 <- d1a %>% filter(!is.na(ended)) 
   d3 <- d2 %>% # unfinished sessions
     filter(data_ok == 1) 
   
@@ -15,10 +19,12 @@ basic_exclusions <- function(d) {
   
   n0 <- nrow(d)
   n1 <- nrow(d1)
+  n1a <- nrow(d1a)
   n2 <- nrow(d2)
   n3 <- nrow(d3)
   n4 <- nrow(d4)
-  return(list(data = d4, exclusions = list(raw = n0, in_period = n1, 
+  return(list(data = d4, exclusions = list(raw = n0, in_period = n1,
+                                           modified = n1a,
                                            fin = n2, ok = n3, students = n4)))
 }
 

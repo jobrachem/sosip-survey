@@ -1,11 +1,14 @@
 Subject numbers. Starting with raw numbers.
-Then, each numberr gives the subject numbers after the exclusion was done.
+Then, each number gives the subject numbers after the exclusion was done.
 
 $raw
 [1] 3745
 
 $in_period
 [1] 3558
+
+$modified
+[1] 2171
 
 $fin
 [1] 1503
