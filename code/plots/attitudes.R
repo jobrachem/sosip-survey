@@ -31,7 +31,7 @@ attitudes_plot <- function(likert_labs) {
                                      levels = 1:5, labels = likert_labs)) %>% 
     as.data.frame() %>% 
     likert::likert() %>% 
-    plot() + 
+    plot(col = c("gray20", "gray35", "gray50", "gray65", "gray80")) + 
     NULL
   
   return(attitudes_plot)
@@ -40,6 +40,7 @@ attitudes_plot <- function(likert_labs) {
 attitudes_plot_ger <- attitudes_plot(likert_labs_ger) +
   scale_x_discrete(labels = c("Eindruck von Informiertheit", "Interesse", "Wichtigkeit")) +
   labs(y = "\nProzent", color = "Antwort") +
+  # scale_fill_grey() +
   guides(fill=guide_legend(title="Antwort"))
 
 attitudes_plot_en <- attitudes_plot(likert_labs_en) +
