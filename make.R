@@ -8,6 +8,7 @@ source("code/helpers/static.R")
 # source("code/donwload_data.R")
 source("code/n_participants.R")
 source("code/prepare_data.R")
+source("code/remove_age.R")
 source("code/wrangling.R")
 
 # analysis files
