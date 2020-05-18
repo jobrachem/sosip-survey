@@ -1,3 +1,5 @@
+# install.packages("renv")
+renv::init()
 source("code/helpers/packages.R")
 source("code/helpers/helper_functions.R")
 source("code/helpers/static.R")
