@@ -59,10 +59,10 @@ ref.practice_taught <- "Nein (Praktik gelehrt)"
 ref.qrp <- "Fehlende Stichprobenplanung (QRP)"
 ref.proj <- "Expra (Projekt)"
 
-abk.glmer <- "B – Beta-Gewicht, SE – Standard Error [Standardfehler], OR – Odds Ratio [Chancenverhältnis], KI - Konfidenzintervall"
+abk.glmer <- "B – Beta-Gewicht, SE – Standard Error (Standardfehler), OR – Odds Ratio (Chancenverhältnis), KI - Konfidenzintervall"
 abk.osi <- "OSI - Open Science Initiative"
 abk.rk <- "RK - Replikationskrise"
-abk.qrp <- "QRP – Questionable Research practice [Fragwürdige Forschungspraktik]"
+abk.qrp <- "QRP – questionable research practice (Fragwürdige Forschungspraktik)"
 abk.sb <- "SB – Selektives Berichten"
 abk.sf <- "SF - Studienfortschritt"
 
