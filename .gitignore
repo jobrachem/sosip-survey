@@ -11,3 +11,5 @@ code/plots_uni.Rmd
 code/download_data.R
 code/wrangling/monitoring.Rmd
 data/raw.csv
+renv/library/
+renv/settings.dcf
