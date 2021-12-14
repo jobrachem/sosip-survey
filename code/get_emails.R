@@ -8,8 +8,8 @@ library(formr)
 library(writexl)
 
 # First: Log in to our formr.org account
-formr_connect("openscience@psyfako.org", 
-              password = "2YEIqeKHr3dRJTnUxDag")
+formr_connect("-", 
+              password = "-")
 
 # Second: Download data
 email_raw <- formr_raw_results("email_opensci") %>% 
